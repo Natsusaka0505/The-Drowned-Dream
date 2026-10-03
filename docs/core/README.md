@@ -26,7 +26,7 @@
 
 area / 回復道具 / 武器 / camera 規模小，Status 與 Action 寫在同一個腳本，以 `#region Status` / `#region Action` 分段。
 
-分類以外但需求（SA）要求的系統：`PlayerRespawn`（死亡復活）、`PlayerConfusion`（低 SAN 方向錯亂）、`FearSource`（恐懼範圍）、`BossController`（Boss）、`Room`（地圖區塊）、`Checkpoint`、`BreathGate`、`SanityStageObject`、`GameFlow`、UI。
+分類以外但需求（SA）要求的系統：`PlayerRespawn`（死亡復活）、`PlayerConfusion`（低 SAN 方向錯亂）、`FearSource`（恐懼範圍）、`BossController`（Boss）、`Room`（地圖區塊）、`Checkpoint`、`BreathGate`、`SanityStageObject`、`GameFlow`、`BgmPlayer`（背景音樂）、UI。
 
 ## 資料夾
 
@@ -41,6 +41,7 @@ Assets/Scripts/
   Weapon/    Harpoon
   Camera/    GameCamera
   World/     Room、Checkpoint、BreathBonusZone、BreathGate、SanityStageObject
+  Audio/     BgmPlayer
   UI/        HUD、InventoryPanel、StoryPanel、SanityScreenEffects、UIFactory
   Editor/    場景 / 地圖產生器
 ```
@@ -67,4 +68,5 @@ Assets/Scripts/
 ## 場景
 
 - 場景由 Editor 工具產生（`Drowned Dream → Build Prototype Scene`），避免多人同時改 scene。
+- 音樂素材放 `Assets/Audio/`（BGM 在 `Assets/Audio/BGM/`），場景產生器會把 BGM 設為串流 + Vorbis 並綁到 `BGM` 物件的 `BgmPlayer`。
 - 地圖由 `MapConfig`（2048×2048 地圖圖 + 碰撞遮罩）產生，見 [08-map SD-02](../feature/需求/08-map/SD/SD-02-map-tilemap.md)。

@@ -29,6 +29,8 @@ namespace DrownedDream.EditorTools
         public const string FarBackgroundPath = "Assets/Art/Background/background.png";
         /// <summary>地圖設定資產路徑。</summary>
         public const string MapConfigPath = "Assets/Data/Map/MapConfig.asset";
+        /// <summary>探索 BGM 路徑。</summary>
+        public const string ExploreBgmPath = "Assets/Audio/BGM/bgm_explore.wav";
 
         /// <summary>地面 Layer。</summary>
         private static int s_groundLayer;
@@ -284,6 +286,35 @@ namespace DrownedDream.EditorTools
 
             var flow = new GameObject("GameFlow").AddComponent<GameFlow>();
             Wire(flow, ("_storyPanel", story));
+
+            BuildBgm();
+        }
+
+        /// <summary>建立 BGM 播放器並綁定探索 BGM（檔案不存在時只警告）。</summary>
+        private static void BuildBgm()
+        {
+            var clip = EnsureBgmImport(ExploreBgmPath);
+            if (clip == null) Debug.LogWarning("[DrownedDream] 找不到 BGM：" + ExploreBgmPath);
+
+            var bgm = new GameObject("BGM").AddComponent<BgmPlayer>();
+            Wire(bgm, ("_clip", clip));
+        }
+
+        /// <summary>BGM 匯入設定：串流載入 + Vorbis 壓縮（WAV 原檔太大，不整首解壓進記憶體）。</summary>
+        private static AudioClip EnsureBgmImport(string path)
+        {
+            if (AssetImporter.GetAtPath(path) is not AudioImporter importer) return null;
+
+            var settings = importer.defaultSampleSettings;
+            if (settings.loadType != AudioClipLoadType.Streaming || settings.compressionFormat != AudioCompressionFormat.Vorbis)
+            {
+                settings.loadType = AudioClipLoadType.Streaming;
+                settings.compressionFormat = AudioCompressionFormat.Vorbis;
+                settings.quality = 0.7f;
+                importer.defaultSampleSettings = settings;
+                importer.SaveAndReimport();
+            }
+            return AssetDatabase.LoadAssetAtPath<AudioClip>(path);
         }
 
         /// <summary>
