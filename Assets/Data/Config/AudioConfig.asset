@@ -1,0 +1,103 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e2818596b9b23411c9c38f0e28ff1b4e, type: 3}
+  m_Name: AudioConfig
+  m_EditorClassIdentifier: Assembly-CSharp::DrownedDream.AudioConfig
+  _jump:
+    _clip: {fileID: 8300000, guid: b61bea91f66034c21b392ecab6509c3e, type: 3}
+    _volume: 0.45
+    _pitch: 1
+    _pitchJitter: 0.05
+    _cooldown: 0.05
+  _land:
+    _clip: {fileID: 8300000, guid: e7ddf65c846d448c0992c8161707dbac, type: 3}
+    _volume: 0.8
+    _pitch: 1
+    _pitchJitter: 0.05
+    _cooldown: 0.15
+  _harpoonThrow:
+    _clip: {fileID: 8300000, guid: a2930f1ea474641c986ee57a0cbadba3, type: 3}
+    _volume: 0.8
+    _pitch: 1
+    _pitchJitter: 0.05
+    _cooldown: 0.05
+  _breathHold:
+    _clip: {fileID: 8300000, guid: 4d6cf78392cf04893be7bbf65fb64c25, type: 3}
+    _volume: 0.7
+    _pitch: 1
+    _pitchJitter: 0.05
+    _cooldown: 0.05
+  _eat:
+    _clip: {fileID: 8300000, guid: fa69ccc44b056479eb2d46a4c49005e3, type: 3}
+    _volume: 1
+    _pitch: 1
+    _pitchJitter: 0.05
+    _cooldown: 0.05
+  _harpoonHit:
+    _clip: {fileID: 8300000, guid: 6b40c8ac126cd4d02b1dbe2d99d20138, type: 3}
+    _volume: 0.9
+    _pitch: 1
+    _pitchJitter: 0.05
+    _cooldown: 0.05
+  _enemyKill:
+    _clip: {fileID: 8300000, guid: 6b40c8ac126cd4d02b1dbe2d99d20138, type: 3}
+    _volume: 1
+    _pitch: 0.8
+    _pitchJitter: 0.05
+    _cooldown: 0.05
+  _bossRoar:
+    _clip: {fileID: 8300000, guid: 0fecb2135d15e4221946d03296620f0e, type: 3}
+    _volume: 0.9
+    _pitch: 1
+    _pitchJitter: 0
+    _cooldown: 6
+  _sealComplete:
+    _clip: {fileID: 8300000, guid: 0fecb2135d15e4221946d03296620f0e, type: 3}
+    _volume: 1
+    _pitch: 0.7
+    _pitchJitter: 0
+    _cooldown: 1
+  _whisper:
+    _clip: {fileID: 8300000, guid: f9d0dc57a99d5466090efb5b0ee5db3a, type: 3}
+    _volume: 0.8
+    _pitch: 1
+    _pitchJitter: 0.05
+    _cooldown: 1
+  _jumpScare:
+    _clip: {fileID: 8300000, guid: 90c8470e1ae5749f29be3b91df8b5af4, type: 3}
+    _volume: 1
+    _pitch: 1
+    _pitchJitter: 0
+    _cooldown: 2
+  _footsteps:
+    _clip: {fileID: 8300000, guid: aa37cbfe7c2df4514a66313c5849e3dd, type: 3}
+    _volume: 0.6
+  _caveWind:
+    _clip: {fileID: 8300000, guid: 7b15db89b0dd84a77badc8dbd75a936c, type: 3}
+    _volume: 0.25
+  _lowSanity:
+    _clip: {fileID: 8300000, guid: a195b5440194744b7b2f3709626fc3db, type: 3}
+    _volume: 0.45
+  _breathLoop:
+    _clip: {fileID: 8300000, guid: decb9be1d66fd4ecba9cbe1cdbf7ccb1, type: 3}
+    _volume: 0.6
+  _bossHall:
+    _clip: {fileID: 8300000, guid: 70c860ec692814093ab6eb7a6b628988, type: 3}
+    _volume: 0.4
+  _water:
+    _clip: {fileID: 8300000, guid: 264bc2093c8e848778afe8124a330505, type: 3}
+    _volume: 0.8
+  _landMinFallSpeed: 4
+  _footstepMinSpeed: 0.5
+  _lowSanityStartRatio: 0.75
+  _musicDuckWhileHolding: 0.4
+  _layerFadeSpeed: 1.5

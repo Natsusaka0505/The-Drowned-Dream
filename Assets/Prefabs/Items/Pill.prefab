@@ -144,5 +144,5 @@ MonoBehaviour:
   _displayName: "\u93AE\u975C\u85E5\u4E38"
   _bobHeight: 0.15
   _bobSpeed: 2
-  _sanityRestore: 30
+  _sanityRestore: 20
   _hpRestore: 0

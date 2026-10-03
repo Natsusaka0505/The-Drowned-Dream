@@ -28,7 +28,7 @@
 | 全域事件 | `Core/GameEvents` |
 | 玩家入口 / 輸入 | `Player/Player`、`Player/PlayerInputReader` |
 | 死亡復活 | `Player/PlayerRespawn`、`World/Checkpoint` |
-| 方向錯亂 | `Player/PlayerConfusion` |
+| 精神錯亂（A/W/D 隨機替換、Space 延遲 / 沒射出） | `Player/PlayerConfusion` |
 | 恐懼範圍 | `Enemy/FearSource` |
 | Boss | `Enemy/BossController`、`Enemy/BossProjectile`、`Area/SealAltar` |
 | 封印道具 | `Item/SealItem` |
@@ -44,11 +44,12 @@
 | `Assets/Data/Config/MovementConfig` | 移動、跳躍、重力 |
 | `Assets/Data/Config/VitalsConfig` | HP、氧氣、復活 |
 | `Assets/Data/Config/BreathConfig` | 憋氣 |
-| `Assets/Data/Config/SanityConfig` | SAN、分段、方向錯亂 |
+| `Assets/Data/Config/SanityConfig` | SAN、分段、精神錯亂（機率、替換、發射延遲） |
 | `Assets/Data/Config/HarpoonConfig` | 魚槍（拋物線） |
+| `Assets/Data/Config/AudioConfig` | 音效 / 環境音（clip、音量、觸發門檻），見 [SD-02 音效](SD-02-audio.md) |
 | `Assets/Data/Map/MapConfig` | 地圖圖、碰撞遮罩、切分、PPU |
 | `Assets/Data/Enemies/*` | 巡游魚怪、觸手、深淵之眼 |
-| `Assets/Prefabs/Items/*` | 封印碎片、鎮靜藥丸（SAN 30）、海草繃帶（HP 30） |
+| `Assets/Prefabs/Items/*` | 封印碎片、鎮靜藥丸（SAN 20）、海草繃帶（HP 20） |
 
 重建場景**不會覆蓋**已存在的資產與道具 Prefab。
 

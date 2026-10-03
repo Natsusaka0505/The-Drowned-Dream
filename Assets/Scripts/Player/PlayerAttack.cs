@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -15,8 +16,8 @@ namespace DrownedDream
         private readonly List<Harpoon> _active = new List<Harpoon>();
         /// <summary>玩家數值（魚叉數）。</summary>
         private PlayerStatus _status;
-        /// <summary>輸入來源。</summary>
-        private PlayerInputReader _input;
+        /// <summary>精神錯亂（提供錯亂後的發射輸入：可能延遲或沒射出）。</summary>
+        private PlayerConfusion _confusion;
         /// <summary>移動（取得面向）。</summary>
         private PlayerMove _move;
         /// <summary>憋氣（發射時結束）。</summary>
@@ -24,11 +25,14 @@ namespace DrownedDream
         /// <summary>發射間隔剩餘秒數。</summary>
         private float _fireTimer;
 
+        /// <summary>射出一支魚叉（音效用）。</summary>
+        public event Action Thrown;
+
         /// <summary>快取元件。</summary>
         private void Awake()
         {
             _status = GetComponent<PlayerStatus>();
-            _input = GetComponent<PlayerInputReader>();
+            _confusion = GetComponent<PlayerConfusion>();
             _move = GetComponent<PlayerMove>();
             _breath = GetComponent<PlayerBreath>();
         }
@@ -37,7 +41,7 @@ namespace DrownedDream
         private void Update()
         {
             _fireTimer -= Time.deltaTime;
-            if (_input.FirePressed) Throw();
+            if (_confusion.FirePressed) Throw();
         }
 
         /// <summary>投擲魚叉攻擊：有魚叉且不在冷卻時發射一支。</summary>
@@ -58,6 +62,7 @@ namespace DrownedDream
             var harpoon = Instantiate(_harpoonPrefab, origin, Quaternion.identity);
             harpoon.Launch(this, _status.Harpoon, dir);
             _active.Add(harpoon);
+            Thrown?.Invoke();
             _status.AddHarpoons(-1);
         }
 

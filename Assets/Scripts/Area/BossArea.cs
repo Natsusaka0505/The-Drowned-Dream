@@ -80,6 +80,7 @@ namespace DrownedDream
             player.Input.SetLocked(true);
             var cam = GameCamera.Instance;
             if (cam != null) cam.SwitchToBossRoom(_boss.gameObject);
+            GameEvents.RaiseBossRevealed();
             GameEvents.ShowMessage("……牠在這裡。", _closeUpSeconds);
             yield return new WaitForSeconds(_closeUpSeconds);
 

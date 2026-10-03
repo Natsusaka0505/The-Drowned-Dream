@@ -19,8 +19,9 @@ MonoBehaviour:
   - 0.7
   - 0.4
   - 0.2
-  _confusionStartRatio: 0.5
-  _confusionMaxChance: 0.3
+  _confusionStartRatio: 0.75
+  _confusionMinChance: 0.15
+  _confusionMaxChance: 0.45
   _confusionCheckInterval: 4
   _confusionWarningTime: 0.75
   _confusionDuration: 2

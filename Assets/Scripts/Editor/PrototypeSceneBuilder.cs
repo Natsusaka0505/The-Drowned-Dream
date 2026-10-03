@@ -33,6 +33,29 @@ namespace DrownedDream.EditorTools
         public const string ExploreBgmPath = "Assets/Audio/BGM/bgm_explore.wav";
         /// <summary>開場 BGM 路徑。</summary>
         public const string IntroBgmPath = "Assets/Audio/BGM/bgm_intro.wav";
+        /// <summary>音效設定資產路徑。</summary>
+        private const string AudioConfigPath = "Assets/Data/Config/AudioConfig.asset";
+        /// <summary>音效設定欄位 ↔ 音檔路徑 ↔ 是否循環（見 SD-02 音效）。</summary>
+        private static readonly (string field, string path, bool loop)[] AudioClips =
+        {
+            ("_jump", "Assets/Audio/SFX/sfx_jump.wav", false),
+            ("_land", "Assets/Audio/SFX/sfx_land.wav", false),
+            ("_harpoonThrow", "Assets/Audio/SFX/sfx_harpoon_throw.wav", false),
+            ("_breathHold", "Assets/Audio/SFX/sfx_breath_hold.wav", false),
+            ("_eat", "Assets/Audio/SFX/sfx_eat.wav", false),
+            ("_harpoonHit", "Assets/Audio/SFX/sfx_harpoon_hit.wav", false),
+            ("_enemyKill", "Assets/Audio/SFX/sfx_harpoon_hit.wav", false),
+            ("_bossRoar", "Assets/Audio/SFX/sfx_boss_roar.wav", false),
+            ("_sealComplete", "Assets/Audio/SFX/sfx_boss_roar.wav", false),
+            ("_whisper", "Assets/Audio/SFX/sfx_whisper.wav", false),
+            ("_jumpScare", "Assets/Audio/SFX/sfx_jumpscare.wav", false),
+            ("_footsteps", "Assets/Audio/SFX/sfx_footsteps_water_loop.wav", true),
+            ("_caveWind", "Assets/Audio/Ambience/amb_cave_wind.wav", true),
+            ("_lowSanity", "Assets/Audio/Ambience/amb_low_sanity.wav", true),
+            ("_breathLoop", "Assets/Audio/Ambience/amb_breath_hold.wav", true),
+            ("_bossHall", "Assets/Audio/Ambience/amb_boss_hall.wav", true),
+            ("_water", "Assets/Audio/Ambience/amb_water.wav", true),
+        };
 
         /// <summary>地面 Layer。</summary>
         private static int s_groundLayer;
@@ -118,6 +141,8 @@ namespace DrownedDream.EditorTools
             public EnemyData Eye;
             /// <summary>玩家用零摩擦材質（避免黏牆）。</summary>
             public PhysicsMaterial2D NoFriction;
+            /// <summary>音效設定。</summary>
+            public AudioConfig Audio;
         }
 
         /// <summary>載入或建立所有資料資產與道具 Prefab。</summary>
@@ -161,9 +186,9 @@ namespace DrownedDream.EditorTools
 
             d.Seal = ItemPrefab<SealItem>("SealFragment", "封印碎片", new Color(1f, 0.85f, 0.3f), null);
             d.Pill = ItemPrefab<RecoveryItem>("Pill", "鎮靜藥丸", new Color(0.95f, 0.75f, 0.9f),
-                so => Set(so, ("_sanityRestore", 30d), ("_hpRestore", 0d)));
+                so => Set(so, ("_sanityRestore", 20d), ("_hpRestore", 0d)));
             d.Medkit = ItemPrefab<RecoveryItem>("Medkit", "海草繃帶", new Color(0.5f, 1f, 0.6f),
-                so => Set(so, ("_sanityRestore", 0d), ("_hpRestore", 30d)));
+                so => Set(so, ("_sanityRestore", 0d), ("_hpRestore", 20d)));
 
             d.Fish = Asset<EnemyData>($"{DataDir}/Enemies/FishMonster.asset", so => Set(so,
                 ("_displayName", "巡游魚怪"),
@@ -223,7 +248,47 @@ namespace DrownedDream.EditorTools
                 d.NoFriction = new PhysicsMaterial2D("PlayerNoFriction") { friction = 0f, bounciness = 0f };
                 AssetDatabase.CreateAsset(d.NoFriction, matPath);
             }
+            d.Audio = Asset<AudioConfig>(AudioConfigPath);
+            FillAudioClips(d.Audio);
             return d;
+        }
+
+        /// <summary>音檔套用匯入設定，並補上 AudioConfig 裡還空著的 clip（已設定的不覆蓋，保留企劃替換）。</summary>
+        private static void FillAudioClips(AudioConfig config)
+        {
+            var so = new SerializedObject(config);
+            foreach (var (field, path, loop) in AudioClips)
+            {
+                var clip = EnsureAudioImport(path, loop);
+                if (clip == null)
+                {
+                    Debug.LogWarning("[DrownedDream] 找不到音效：" + path);
+                    continue;
+                }
+                var p = so.FindProperty($"{field}._clip");
+                if (p != null && p.objectReferenceValue == null) p.objectReferenceValue = clip;
+            }
+            so.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(config);
+        }
+
+        /// <summary>音效匯入設定：單次音效解壓進記憶體（ADPCM，延遲低）；循環音壓縮存放（Vorbis）。</summary>
+        private static AudioClip EnsureAudioImport(string path, bool loop)
+        {
+            if (AssetImporter.GetAtPath(path) is not AudioImporter importer) return null;
+
+            var settings = importer.defaultSampleSettings;
+            var loadType = loop ? AudioClipLoadType.CompressedInMemory : AudioClipLoadType.DecompressOnLoad;
+            var format = loop ? AudioCompressionFormat.Vorbis : AudioCompressionFormat.ADPCM;
+            if (settings.loadType != loadType || settings.compressionFormat != format)
+            {
+                settings.loadType = loadType;
+                settings.compressionFormat = format;
+                settings.quality = 0.6f;
+                importer.defaultSampleSettings = settings;
+                importer.SaveAndReimport();
+            }
+            return AssetDatabase.LoadAssetAtPath<AudioClip>(path);
         }
 
         /// <summary>建立魚叉 Prefab（每次覆蓋）。</summary>
@@ -291,6 +356,9 @@ namespace DrownedDream.EditorTools
             Wire(flow, ("_storyPanel", story));
 
             BuildBgm();
+
+            var audio = new GameObject("GameAudio").AddComponent<GameAudio>();
+            Wire(audio, ("_config", d.Audio));
         }
 
         /// <summary>建立 BGM 播放器並綁定開場 / 探索 BGM（檔案不存在時只警告）。</summary>
@@ -352,7 +420,7 @@ namespace DrownedDream.EditorTools
             MakeCheckpoint(root, PrototypeMapLayout.Local(0, 2, 12f, floorItemY));
 
             // 第 1 排（左 → 右），(0,1) 有憋氣屏障擋住往右的路
-            MakeBreathGate(root, PrototypeMapLayout.Local(0, 1, 14f, 0.5f), new Vector2(0.5f, 15f));
+            MakeBreathGate(root, PrototypeMapLayout.Local(0, 1, 14f, 0.5f), new Vector2(0.5f, 15f), d.Audio.Water);
             MakePickup(root, d.Seal, PrototypeMapLayout.Local(1, 1, 8f, floorItemY));
             MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(1, 1, 10f, 3f));
             MakeEnemy(root, d.Eye, PrototypeMapLayout.Local(2, 1, 8f, 11f));
@@ -515,9 +583,18 @@ namespace DrownedDream.EditorTools
             Wire(area, ("_boss", boss));
         }
 
-        /// <summary>建立憋氣屏障（左下角位置 + 尺寸）。</summary>
-        private static void MakeBreathGate(Transform parent, Vector2 bottomLeft, Vector2 size)
+        /// <summary>建立憋氣屏障（左下角位置 + 尺寸），並在底部附近放水聲（靠近才聽得到）。</summary>
+        private static void MakeBreathGate(Transform parent, Vector2 bottomLeft, Vector2 size, LoopEntry water)
         {
+            if (water != null && water.Clip != null)
+            {
+                var sound = new GameObject("BreathGateWater");
+                sound.transform.SetParent(parent);
+                sound.transform.position = bottomLeft + new Vector2(size.x / 2f, 2f);
+                var emitter = sound.AddComponent<AmbientEmitter>();
+                Wire(emitter, ("_clip", water.Clip), ("_volume", water.Volume));
+            }
+
             var go = new GameObject("BreathGate") { layer = s_groundLayer };
             go.transform.SetParent(parent);
             go.transform.position = bottomLeft + size / 2f;

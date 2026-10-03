@@ -49,8 +49,33 @@
 | 檔案 | 用途 | 規格 | 備註 |
 |---|---|---|---|
 | `Assets/Audio/BGM/bgm_intro.wav` | 開場 BGM（原檔 `Project 2_2.wav`），開場文字演出期間播放 | WAV 48kHz / 24-bit / 立體聲，16 秒，循環 | `[待確認]` 開場文字比 16 秒長時要循環還是只放一次（目前循環） |
-| `Assets/Audio/BGM/bgm_explore.wav` | 探索 BGM（原檔 `Project 2.wav`） | WAV 48kHz / 24-bit / 立體聲，24 秒，循環 | 匯入時轉 Vorbis 串流；`[待確認]` 是否也用於 Boss / 結局 |
+| `Assets/Audio/BGM/bgm_explore.wav` | 探索 BGM，進入場景（開場結束）後播放（原檔 `Project 2_1.wav`；2026-10-03 由 `Project 2.wav` 換成） | WAV 48kHz / 24-bit / 立體聲，8 秒，循環 | 匯入時轉 Vorbis 串流；`[待確認]` 是否也用於 Boss / 結局 |
 | 玩家 | 呼吸（循環）、憋氣開始 / 結束、發射魚叉、撿回魚叉、受傷、窒息、死亡 |
 | 敵人 | 魚怪衝撞、觸手攻擊、深淵之眼低鳴、擊殺 |
 | SAN | 低語（方向錯亂預告）、心跳（低 SAN） |
 | 系統 | 拾取道具、使用道具、存檔點啟用、封印完成 |
+
+### 已交付：音效 / 環境音（2026-10-03）
+
+原檔改英文檔名存於 `ArtSource/Audio/`，用 `Tools/process_audio.py` 處理成 WAV（單次音效去開頭空白；循環音切淡入淡出 + 無縫交叉淡化）。用途與觸發時機見 [SD-02 音效](../SD/SD-02-audio.md)。
+
+| 遊戲用檔案 | 原檔 | 用途 |
+|---|---|---|
+| `SFX/sfx_jump.wav` | 跳.mp3 | 跳躍 |
+| `SFX/sfx_land.wav` | 落地.mp3 | 落地 |
+| `SFX/sfx_footsteps_water_loop.wav` | 涉水.mp3 | 腳步（循環） |
+| `SFX/sfx_harpoon_throw.wav` | Swinging_a_heavy_wea_#4-1791020701576.mp3 | 發射魚叉 |
+| `SFX/sfx_harpoon_hit.wav` | 刀刺肉mp3.mp3 | 魚叉命中；擊殺借用 |
+| `SFX/sfx_eat.wav` | 吃3.mp3 | 使用回復道具 |
+| `SFX/sfx_breath_hold.wav` | sound_in_underwater__#4-1791020656905.mp3 | 開始憋氣 |
+| `SFX/sfx_boss_roar.wav` | boss .mp3 | Boss 咆哮；封印完成借用 |
+| `SFX/sfx_whisper.wav` | Eerie,_echoing_whisp_#4-1791020970472.mp3 | 精神錯亂預告（低語） |
+| `SFX/sfx_jumpscare.wav` | jump scare.mp3 | SAN 掉進更低分段 |
+| `Ambience/amb_cave_wind.wav` | 恐怖風聲.mp3（截 60 秒） | 洞窟基底環境音 |
+| `Ambience/amb_low_sanity.wav` | 恐怖音效.mp3 | 低 SAN 環境音 |
+| `Ambience/amb_breath_hold.wav` | 恐怖風聲空靈.mp3 | 憋氣中的空靈音 |
+| `Ambience/amb_boss_hall.wav` | 恐怖背景音空靈恐怖.mp3 | Boss 房環境音 |
+| `Ambience/amb_water.wav` | 水聲.mp3 | 憋氣屏障水聲（位置音效） |
+
+`[待確認]` 用途為開發依檔名與波形判讀，請音效試聽確認。
+

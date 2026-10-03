@@ -68,6 +68,7 @@ namespace DrownedDream
             if (!IsAlive) return false;
             HitCount++;
             Hit?.Invoke(HitCount);
+            GameEvents.RaiseEnemyHit(!IsAlive);
             if (!IsAlive) Die();
             return true;
         }
