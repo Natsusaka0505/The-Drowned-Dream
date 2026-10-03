@@ -49,9 +49,13 @@
 | `Assets/Data/Config/AudioConfig` | 音效 / 環境音（clip、音量、觸發門檻），見 [SD-02 音效](SD-02-audio.md) |
 | `Assets/Data/Map/MapConfig` | 地圖圖、碰撞遮罩、切分、PPU |
 | `Assets/Data/Enemies/*` | 巡游魚怪、觸手、深淵之眼 |
-| `Assets/Prefabs/Items/*` | 封印碎片、鎮靜藥丸（SAN 20）、海草繃帶（HP 20） |
+| `Assets/Prefabs/Items/*` | 邪神雕像（`SealFragment`）、鎮靜藥丸（SAN 20）、海草繃帶（HP 20）；重建時把佔位圓換成正式圖（`ApplyItemArt`，PPU 決定大小） |
 
-重建場景**不會覆蓋**已存在的資產與道具 Prefab。
+| `Assets/Prefabs/Chests/*` | 寶箱：`TreasureChest`（基底）+ Variant `Chest_Gray`（繃帶）/ `Chest_BlueGray`（藥丸）/ `Chest_Black`（邪神雕像）。動畫參數在 `TreasureChest` Inspector 調整；開箱由玩家的 `PlayerOpenChest` 讀互動鍵 |
+
+重建場景**不會覆蓋**已存在的資產與道具 Prefab 的數值（只換圖；顯示名稱仍是「封印碎片」時改為「邪神雕像」）。
+
+場景另建 `EventSystem`（InputSystemUIInputModule）與 Canvas 上的 `TitleScreen`（封面），`GameFlow` 流程：Title → Intro → Playing → Ending → 重載回 Title。
 
 ## Editor 工具
 

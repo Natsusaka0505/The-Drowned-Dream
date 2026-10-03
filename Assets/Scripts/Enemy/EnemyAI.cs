@@ -33,6 +33,10 @@ namespace DrownedDream
         [SerializeField] private float _minX;
         /// <summary>活動範圍右界（世界 X）。</summary>
         [SerializeField] private float _maxX;
+        /// <summary>外觀上下浮動幅度（單位；只動外觀，不動碰撞框）。</summary>
+        [SerializeField] private float _bobHeight = 0.08f;
+        /// <summary>外觀上下浮動速度（弧度 / 秒）。</summary>
+        [SerializeField] private float _bobSpeed = 2.5f;
 
         /// <summary>敵人數值。</summary>
         private EnemyStatus _status;
@@ -52,6 +56,10 @@ namespace DrownedDream
         private Color _baseColor;
         /// <summary>原始縮放。</summary>
         private Vector3 _baseScale;
+        /// <summary>外觀原始局部位置（浮動基準）。</summary>
+        private Vector3 _baseVisualPos;
+        /// <summary>浮動相位（每隻隨機，避免同步上下）。</summary>
+        private float _bobPhase;
 
         /// <summary>敵人資料。</summary>
         private EnemyData Data => _status.Data;
@@ -67,7 +75,9 @@ namespace DrownedDream
             {
                 _baseColor = _renderer.color;
                 _baseScale = _renderer.transform.localScale;
+                _baseVisualPos = _renderer.transform.localPosition;
             }
+            _bobPhase = Random.Range(0f, Mathf.PI * 2f);
         }
 
         /// <summary>訂閱受擊事件。</summary>
@@ -81,6 +91,7 @@ namespace DrownedDream
         {
             UpdateFlash();
             if (!_status.IsAlive || !GameFlow.IsPlaying) return;
+            UpdateBob();
 
             var player = Player.Instance;
             _status.SetPlayerDetected(DetectPlayer(player, _status.DetectRange));
@@ -196,6 +207,14 @@ namespace DrownedDream
             _body.MovePosition(new Vector2(newX, pos.y));
             if (_renderer != null && Mathf.Abs(targetX - pos.x) > 0.01f) _renderer.flipX = targetX < pos.x;
             return arrived;
+        }
+
+        /// <summary>外觀微微上下浮動。</summary>
+        private void UpdateBob()
+        {
+            if (_renderer == null) return;
+            float y = Mathf.Sin(Time.time * _bobSpeed + _bobPhase) * _bobHeight;
+            _renderer.transform.localPosition = _baseVisualPos + new Vector3(0f, y, 0f);
         }
 
         /// <summary>受擊時閃白。</summary>

@@ -26,7 +26,7 @@
 
 area / 回復道具 / 武器 / camera 規模小，Status 與 Action 寫在同一個腳本，以 `#region Status` / `#region Action` 分段。
 
-分類以外但需求（SA）要求的系統：`PlayerRespawn`（死亡復活）、`PlayerConfusion`（低 SAN 精神錯亂）、`FearSource`（恐懼範圍）、`BossController`（Boss）、`Room`（地圖區塊）、`Checkpoint`、`BreathGate`、`SanityStageObject`、`GameFlow`、`BgmPlayer`（背景音樂）、UI。
+分類以外但需求（SA）要求的系統：`PlayerRespawn`（死亡復活）、`PlayerConfusion`（低 SAN 精神錯亂）、`FearSource`（恐懼範圍）、`BossController`（Boss）、`Room`（地圖區塊）、`Checkpoint`、`BreathGate`、`SanityStageObject`、`GameFlow`、`BgmPlayer`（背景音樂）、`PlayerOpenChest` + `TreasureChest`（寶箱）、UI。
 
 ## 資料夾
 
@@ -37,12 +37,12 @@ Assets/Scripts/
   Player/    PlayerStatus + 各 Action、Player（入口）、PlayerInputReader
   Enemy/     EnemyStatus、EnemyAI、FearSource、BossController、BossProjectile
   Area/      BossArea、SealAltar
-  Item/      PickupItem（基底）、RecoveryItem、SealItem
+  Item/      PickupItem（基底）、RecoveryItem、SealItem、TreasureChest（寶箱）
   Weapon/    Harpoon
   Camera/    GameCamera
   World/     Room、Checkpoint、BreathBonusZone、BreathGate、SanityStageObject
   Audio/     BgmPlayer、GameAudio（音效 + 環境音）、AmbientEmitter（位置循環音）
-  UI/        HUD、InventoryPanel、StoryPanel、SanityScreenEffects、UIFactory
+  UI/        HUD、InventoryPanel、StoryPanel、TitleScreen（封面）、TitleButtonHover、SanityScreenEffects、UIFactory
   Editor/    場景 / 地圖產生器（含地形自動貼圖）
 ```
 

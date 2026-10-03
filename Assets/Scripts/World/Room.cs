@@ -57,6 +57,16 @@ namespace DrownedDream
             s_occupied.Remove(this);
         }
 
+        /// <summary>整張地圖（所有區塊聯集）的世界座標邊界；沒有區塊時回傳 false。</summary>
+        public static bool TryGetWorldBounds(out Bounds bounds)
+        {
+            bounds = default;
+            if (s_all.Count == 0) return false;
+            bounds = s_all[0].Bounds;
+            for (int i = 1; i < s_all.Count; i++) bounds.Encapsulate(s_all[i].Bounds);
+            return true;
+        }
+
         /// <summary>找出包含某世界座標的區塊（找不到回傳 null）。</summary>
         public static Room FindAt(Vector2 position)
         {

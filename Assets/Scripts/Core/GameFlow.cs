@@ -6,6 +6,8 @@ namespace DrownedDream
     /// <summary>遊戲流程狀態。</summary>
     public enum GameState
     {
+        /// <summary>封面（等待按 Start）。</summary>
+        Title,
         /// <summary>開場演出中。</summary>
         Intro,
         /// <summary>遊玩中。</summary>
@@ -16,7 +18,7 @@ namespace DrownedDream
         Ending,
     }
 
-    /// <summary>遊戲流程：開場 → 遊玩 → 結局 → 重新開始（F-STORY）。</summary>
+    /// <summary>遊戲流程：封面 → 開場 → 遊玩 → 結局 → 回到封面（F-STORY）。</summary>
     public class GameFlow : MonoBehaviour
     {
         /// <summary>場景中唯一的流程控制器。</summary>
@@ -26,9 +28,11 @@ namespace DrownedDream
         /// <summary>是否在遊玩中（輸入、計時只在此狀態運作）。</summary>
         public static bool IsPlaying => State == GameState.Playing;
 
+        /// <summary>封面（Start / Quit）。</summary>
+        [SerializeField] private TitleScreen _titleScreen;
         /// <summary>開場 / 結局文字面板。</summary>
         [SerializeField] private StoryPanel _storyPanel;
-        /// <summary>測試用：跳過開場。</summary>
+        /// <summary>測試用：跳過封面與開場。</summary>
         [SerializeField] private bool _skipIntro;
 
         [Header("[待確認] 開場 / 結局文字")]
@@ -55,7 +59,7 @@ namespace DrownedDream
         };
 
         /// <summary>目前狀態。</summary>
-        private GameState _state = GameState.Intro;
+        private GameState _state = GameState.Title;
 
         /// <summary>註冊單例。</summary>
         private void Awake()
@@ -75,8 +79,21 @@ namespace DrownedDream
             GameEvents.BossSealed -= OnBossSealed;
         }
 
-        /// <summary>播放開場或直接進入遊玩。</summary>
+        /// <summary>顯示封面（沒有封面時直接播開場）。</summary>
         private void Start()
+        {
+            if (_skipIntro || _titleScreen == null)
+            {
+                PlayIntro();
+                return;
+            }
+
+            SetState(GameState.Title);
+            _titleScreen.Show(PlayIntro);
+        }
+
+        /// <summary>播放開場文字，播完進入遊玩（跳過開場或沒有面板時直接遊玩）。</summary>
+        private void PlayIntro()
         {
             if (_skipIntro || _storyPanel == null)
             {
@@ -98,10 +115,10 @@ namespace DrownedDream
             }
         }
 
-        /// <summary>切換暫停（開場 / 結局中不可切換）。</summary>
+        /// <summary>切換暫停（封面 / 開場 / 結局中不可切換）。</summary>
         public void SetPaused(bool paused)
         {
-            if (_state == GameState.Intro || _state == GameState.Ending) return;
+            if (_state != GameState.Playing && _state != GameState.Paused) return;
             SetState(paused ? GameState.Paused : GameState.Playing);
         }
 
@@ -117,7 +134,7 @@ namespace DrownedDream
             _storyPanel.Play(_endingLines, Restart);
         }
 
-        /// <summary>重新載入目前場景（回到開場）。</summary>
+        /// <summary>重新載入目前場景（回到封面）。</summary>
         private void Restart()
         {
             Time.timeScale = 1f;

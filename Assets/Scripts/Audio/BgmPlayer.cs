@@ -10,7 +10,7 @@ namespace DrownedDream
     [RequireComponent(typeof(AudioSource))]
     public class BgmPlayer : MonoBehaviour
     {
-        /// <summary>開場演出時播放的 BGM。</summary>
+        /// <summary>封面與開場演出時播放的 BGM。</summary>
         [SerializeField] private AudioClip _introClip;
         /// <summary>遊玩（探索）時播放的 BGM。</summary>
         [SerializeField] private AudioClip _exploreClip;
@@ -82,8 +82,8 @@ namespace DrownedDream
         /// <summary>流程狀態事件 → 切到對應 BGM。</summary>
         private void OnGameStateChanged(GameState state) => Play(ClipFor(state));
 
-        /// <summary>流程狀態對應的曲子：開場放開場曲，其餘（遊玩 / 暫停 / 結局）放探索曲。</summary>
-        private AudioClip ClipFor(GameState state) => state == GameState.Intro && _introClip != null ? _introClip : _exploreClip;
+        /// <summary>流程狀態對應的曲子：封面 / 開場放開場曲，其餘（遊玩 / 暫停 / 結局）放探索曲。</summary>
+        private AudioClip ClipFor(GameState state) => (state == GameState.Title || state == GameState.Intro) && _introClip != null ? _introClip : _exploreClip;
 
         /// <summary>切換並播放指定 BGM（同一首則不重播）。曲子一律由流程狀態決定，因此不開放外部呼叫。</summary>
         private void Play(AudioClip clip)

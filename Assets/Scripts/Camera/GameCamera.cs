@@ -3,7 +3,7 @@ using UnityEngine;
 namespace DrownedDream
 {
     /// <summary>
-    /// camera（docs/core）：平常跟隨玩家（限制在目前 Room 內）；第一次進 Boss 房時切到 Boss 特寫，再切回玩家。
+    /// camera（docs/core）：平常跟隨玩家（限制在整張地圖內，不露出地圖外）；第一次進 Boss 房時平移到 Boss 特寫，再平移回玩家。
     /// </summary>
     [RequireComponent(typeof(Camera))]
     public class GameCamera : MonoBehaviour
@@ -19,11 +19,15 @@ namespace DrownedDream
         #endregion
 
         /// <summary>跟隨玩家時的畫面大小（orthographicSize）。</summary>
-        [SerializeField] private float _followSize = 6f;
+        [SerializeField] private float _followSize = 7f;
         /// <summary>Boss 特寫時的畫面大小。</summary>
         [SerializeField] private float _closeUpSize = 4.5f;
         /// <summary>平滑跟隨時間。</summary>
         [SerializeField] private float _smoothTime = 0.15f;
+        /// <summary>切換目標（玩家 ↔ Boss）時的平移平滑時間（越大越慢）。</summary>
+        [SerializeField] private float _switchSmoothTime = 0.5f;
+        /// <summary>切換平移距離小於此值時視為抵達，恢復一般跟隨速度。</summary>
+        [SerializeField] private float _switchArriveDistance = 0.3f;
         /// <summary>畫面大小切換速度。</summary>
         [SerializeField] private float _zoomSpeed = 3f;
         /// <summary>跟隨玩家時的偏移。</summary>
@@ -39,8 +43,10 @@ namespace DrownedDream
         private Vector3 _shakeOffset;
         /// <summary>目標畫面大小。</summary>
         private float _targetSize;
-        /// <summary>是否為 Boss 特寫模式（不限制在 Room 內、不加偏移）。</summary>
+        /// <summary>是否為 Boss 特寫模式（不限制在地圖內、不加偏移）。</summary>
         private bool _closeUp;
+        /// <summary>是否正在切換目標的平移中（用較慢的平滑時間）。</summary>
+        private bool _switching;
 
         /// <summary>目前跟隨的目標。</summary>
         public GameObject Target => _target;
@@ -77,6 +83,7 @@ namespace DrownedDream
         {
             _target = _player;
             _closeUp = false;
+            _switching = true;
             _targetSize = _followSize;
         }
 
@@ -85,6 +92,7 @@ namespace DrownedDream
         {
             _target = boss;
             _closeUp = true;
+            _switching = true;
             _targetSize = _closeUpSize;
         }
 
@@ -99,7 +107,9 @@ namespace DrownedDream
 
             transform.position -= _shakeOffset;
             var desired = _closeUp ? Desired() : Clamp(Desired());
-            var pos = Vector3.SmoothDamp(transform.position, desired, ref _velocity, _smoothTime, Mathf.Infinity, dt);
+            if (_switching && Vector2.Distance(transform.position, desired) < _switchArriveDistance) _switching = false;
+            float smooth = _switching ? _switchSmoothTime : _smoothTime;
+            var pos = Vector3.SmoothDamp(transform.position, desired, ref _velocity, smooth, Mathf.Infinity, dt);
             _shakeOffset = ShakeAmount > 0f ? (Vector3)(Random.insideUnitCircle * ShakeAmount) : Vector3.zero;
             transform.position = pos + _shakeOffset;
         }
@@ -112,13 +122,11 @@ namespace DrownedDream
             return p;
         }
 
-        /// <summary>限制在目前區塊內；區塊比畫面小時置中。</summary>
+        /// <summary>限制在整張地圖內（不露出地圖外）；地圖比畫面小時置中。</summary>
         private Vector3 Clamp(Vector3 pos)
         {
-            var room = Room.Current;
-            if (room == null) return pos;
+            if (!Room.TryGetWorldBounds(out var b)) return pos;
 
-            var b = room.Bounds;
             float halfH = _camera.orthographicSize;
             float halfW = halfH * _camera.aspect;
 

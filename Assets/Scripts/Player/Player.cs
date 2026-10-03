@@ -6,6 +6,7 @@ namespace DrownedDream
     [RequireComponent(typeof(PlayerStatus), typeof(PlayerInputReader), typeof(PlayerMove))]
     [RequireComponent(typeof(PlayerAttack), typeof(PlayerBreath), typeof(PlayerPickup))]
     [RequireComponent(typeof(PlayerEnding), typeof(PlayerRespawn), typeof(PlayerConfusion))]
+    [RequireComponent(typeof(PlayerOpenChest))]
     public class Player : MonoBehaviour
     {
         /// <summary>場景中唯一的玩家。</summary>

@@ -111,8 +111,8 @@ namespace DrownedDream
             bool playing = GameFlow.IsPlaying;
             bool holding = _player != null && _player.Status.IsHoldingBreath;
 
-            // 洞窟風聲：開場以外一直有
-            Fade(_caveWind, GameFlow.State == GameState.Intro ? 0f : _config.CaveWind.Volume);
+            // 洞窟風聲：封面 / 開場以外一直有
+            Fade(_caveWind, GameFlow.State is GameState.Title or GameState.Intro ? 0f : _config.CaveWind.Volume);
             // 低 SAN：低於起始比例開始淡入，SAN 0 最大聲
             float sanT = 0f;
             if (_player != null && _config.LowSanityStartRatio > 0f)

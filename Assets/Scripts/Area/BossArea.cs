@@ -12,7 +12,7 @@ namespace DrownedDream
         /// <summary>房內的 Boss。</summary>
         [SerializeField] private BossController _boss;
         /// <summary>第一次進房的鏡頭特寫秒數。</summary>
-        [SerializeField] private float _closeUpSeconds = 2.5f;
+        [SerializeField] private float _closeUpSeconds = 3.5f;
         /// <summary>[待確認] Boss 是否追出房間（原型：否）。</summary>
         [SerializeField] private bool _bossFollowsOutside;
 

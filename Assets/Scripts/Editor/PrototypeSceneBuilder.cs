@@ -3,6 +3,8 @@ using System.Linq;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem.UI;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.UI;
 using Object = UnityEngine.Object;
@@ -33,6 +35,22 @@ namespace DrownedDream.EditorTools
         public const string ExploreBgmPath = "Assets/Audio/BGM/bgm_explore.wav";
         /// <summary>開場 BGM 路徑。</summary>
         public const string IntroBgmPath = "Assets/Audio/BGM/bgm_intro.wav";
+        /// <summary>封面底圖路徑。</summary>
+        public const string TitleCoverPath = "Assets/Art/UI/title_cover.png";
+        /// <summary>Start 按鈕圖路徑。</summary>
+        public const string StartButtonPath = "Assets/Art/UI/btn_start.png";
+        /// <summary>Quit 按鈕圖路徑。</summary>
+        public const string QuitButtonPath = "Assets/Art/UI/btn_quit.png";
+        /// <summary>邪神雕像（封印道具）圖路徑。</summary>
+        public const string IdolSpritePath = "Assets/Art/Items/item_idol.png";
+        /// <summary>藥丸（回復 SAN）圖路徑。</summary>
+        public const string PillSpritePath = "Assets/Art/Items/item_pill.png";
+        /// <summary>繃帶（回復 HP）圖路徑。</summary>
+        public const string BandageSpritePath = "Assets/Art/Items/item_bandage.png";
+        /// <summary>寶箱圖資料夾（chest_{顏色}_{closed|open}.png）。</summary>
+        public const string ChestArtDir = "Assets/Art/Chests";
+        /// <summary>寶箱圖 PPU（195px 寬 ≈ 1.3 單位）。</summary>
+        private const int ChestPixelsPerUnit = 150;
         /// <summary>音效設定資產路徑。</summary>
         private const string AudioConfigPath = "Assets/Data/Config/AudioConfig.asset";
         /// <summary>音效設定欄位 ↔ 音檔路徑 ↔ 是否循環（見 SD-02 音效）。</summary>
@@ -133,6 +151,12 @@ namespace DrownedDream.EditorTools
             public GameObject Pill;
             /// <summary>海草繃帶 Prefab（回復 HP）。</summary>
             public GameObject Medkit;
+            /// <summary>灰寶箱（開出海草繃帶）。</summary>
+            public GameObject ChestGray;
+            /// <summary>藍灰寶箱（開出鎮靜藥丸）。</summary>
+            public GameObject ChestBlueGray;
+            /// <summary>黑寶箱（開出邪神雕像）。</summary>
+            public GameObject ChestBlack;
             /// <summary>巡游魚怪。</summary>
             public EnemyData Fish;
             /// <summary>觸手。</summary>
@@ -184,11 +208,19 @@ namespace DrownedDream.EditorTools
                 }
             }
 
-            d.Seal = ItemPrefab<SealItem>("SealFragment", "封印碎片", new Color(1f, 0.85f, 0.3f), null);
+            d.Seal = ItemPrefab<SealItem>("SealFragment", "邪神雕像", new Color(1f, 0.85f, 0.3f), null);
             d.Pill = ItemPrefab<RecoveryItem>("Pill", "鎮靜藥丸", new Color(0.95f, 0.75f, 0.9f),
                 so => Set(so, ("_sanityRestore", 20d), ("_hpRestore", 0d)));
             d.Medkit = ItemPrefab<RecoveryItem>("Medkit", "海草繃帶", new Color(0.5f, 1f, 0.6f),
                 so => Set(so, ("_sanityRestore", 0d), ("_hpRestore", 20d)));
+            ApplyItemArt(d.Seal, IdolSpritePath, 384, ("封印碎片", "邪神雕像"));
+            ApplyItemArt(d.Pill, PillSpritePath, 320);
+            ApplyItemArt(d.Medkit, BandageSpritePath, 320);
+
+            var chestBase = ChestBasePrefab();
+            d.ChestGray = ChestVariant(chestBase, "Chest_Gray", "gray", d.Medkit);
+            d.ChestBlueGray = ChestVariant(chestBase, "Chest_BlueGray", "bluegray", d.Pill);
+            d.ChestBlack = ChestVariant(chestBase, "Chest_Black", "black", d.Seal);
 
             d.Fish = Asset<EnemyData>($"{DataDir}/Enemies/FishMonster.asset", so => Set(so,
                 ("_displayName", "巡游魚怪"),
@@ -346,19 +378,45 @@ namespace DrownedDream.EditorTools
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920f, 1080f);
             scaler.matchWidthOrHeight = 0.5f;
+            canvasGo.AddComponent<GraphicRaycaster>(); // 滑鼠點擊 UI（封面按鈕）需要
             var effects = canvasGo.AddComponent<SanityScreenEffects>();
             Wire(effects, ("_globalLight", globalLight), ("_camera", gameCamera));
             canvasGo.AddComponent<HUD>();
             canvasGo.AddComponent<InventoryPanel>();
             var story = canvasGo.AddComponent<StoryPanel>();
+            var title = BuildTitleScreen(canvasGo);
+
+            var eventSystem = new GameObject("EventSystem");
+            eventSystem.AddComponent<EventSystem>();
+            eventSystem.AddComponent<InputSystemUIInputModule>();
 
             var flow = new GameObject("GameFlow").AddComponent<GameFlow>();
-            Wire(flow, ("_storyPanel", story));
+            Wire(flow, ("_titleScreen", title), ("_storyPanel", story));
 
             BuildBgm();
 
             var audio = new GameObject("GameAudio").AddComponent<GameAudio>();
             Wire(audio, ("_config", d.Audio));
+        }
+
+        /// <summary>在 Canvas 上建立封面並綁定封面底圖與按鈕圖（檔案不存在時只警告）。</summary>
+        private static TitleScreen BuildTitleScreen(GameObject canvasGo)
+        {
+            var title = canvasGo.AddComponent<TitleScreen>();
+            Wire(title,
+                ("_cover", UISprite(TitleCoverPath, 4096)),
+                ("_startSprite", UISprite(StartButtonPath, 1024)),
+                ("_quitSprite", UISprite(QuitButtonPath, 1024)));
+            return title;
+        }
+
+        /// <summary>以 UI 用 Sprite 匯入並載入圖片（找不到時警告並回傳 null）。</summary>
+        private static Sprite UISprite(string path, int maxSize)
+        {
+            ConfigureSprite(path, 100, SpriteAlignment.Center, maxSize, compressed: true);
+            var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            if (sprite == null) Debug.LogWarning("[DrownedDream] 找不到 UI 圖：" + path);
+            return sprite;
         }
 
         /// <summary>建立 BGM 播放器並綁定開場 / 探索 BGM（檔案不存在時只警告）。</summary>
@@ -406,22 +464,22 @@ namespace DrownedDream.EditorTools
 
             // 第 3 排（起點）
             MakeCheckpoint(root, PrototypeMapLayout.Local(0, 3, 2f, floorItemY)); // 避開貼地方塊（4~8）
-            MakePickup(root, d.Pill, PrototypeMapLayout.Local(0, 3, 11f, highPlatY));
+            MakeChest(root, d.ChestBlueGray, PrototypeMapLayout.Local(0, 3, 11f, highPlatY));
             MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(1, 3, 10f, floorY), FishZone(1));
             MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(1, 3, 13.5f, floorY), FishZone(1));
             MakeEnemy(root, d.Eye, PrototypeMapLayout.Local(2, 3, 12f, floorY));
             MakeEnemy(root, d.Eye, PrototypeMapLayout.Local(2, 3, 2f, floorY));
-            MakePickup(root, d.Seal, PrototypeMapLayout.Local(2, 3, 11f, highPlatY));
+            MakeChest(root, d.ChestBlack, PrototypeMapLayout.Local(2, 3, 11f, highPlatY));
             MakeHallucination(root, PrototypeMapLayout.Local(2, 3, 6f, 12f), 1);
-            MakePickup(root, d.Medkit, PrototypeMapLayout.Local(3, 3, 12f, floorItemY));
+            MakeChest(root, d.ChestGray, PrototypeMapLayout.Local(3, 3, 12f, floorItemY));
 
             // 第 2 排（右 → 左）
             MakeEnemy(root, d.Tentacle, PrototypeMapLayout.Local(3, 2, 12f, floorY)); // 避開右側階梯方塊
             MakeEnemy(root, d.Tentacle, PrototypeMapLayout.Local(3, 2, 3f, floorY));  // 守住往左的門
             MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(2, 2, 10f, floorY), FishZone(2));
             MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(2, 2, 13.5f, floorY), FishZone(2));
-            MakePickup(root, d.Pill, PrototypeMapLayout.Local(2, 2, 11f, highPlatY));
-            MakePickup(root, d.Medkit, PrototypeMapLayout.Local(1, 2, 6f, lowPlatY));
+            MakeChest(root, d.ChestBlueGray, PrototypeMapLayout.Local(2, 2, 11f, highPlatY));
+            MakeChest(root, d.ChestGray, PrototypeMapLayout.Local(1, 2, 6f, lowPlatY));
             MakeEnemy(root, d.Eye, PrototypeMapLayout.Local(1, 2, 3f, floorY));
             MakeEnemy(root, d.Eye, PrototypeMapLayout.Local(1, 2, 14f, floorY));
             MakeHallucination(root, PrototypeMapLayout.Local(1, 2, 9f, 12f), 2);
@@ -429,23 +487,23 @@ namespace DrownedDream.EditorTools
 
             // 第 1 排（左 → 右），(0,1) 有憋氣屏障擋住往右的路
             MakeBreathGate(root, PrototypeMapLayout.Local(0, 1, 14f, 0.5f), new Vector2(0.5f, 15f), d.Audio.Water);
-            MakePickup(root, d.Seal, PrototypeMapLayout.Local(1, 1, 9f, floorItemY)); // 避開貼地方塊（4~8）
+            MakeChest(root, d.ChestBlack, PrototypeMapLayout.Local(1, 1, 9f, floorItemY)); // 避開貼地方塊（4~8）
             MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(1, 1, 10f, floorY), FishZone(1));
             MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(1, 1, 13.5f, floorY), FishZone(1));
             MakeEnemy(root, d.Eye, PrototypeMapLayout.Local(2, 1, 10f, floorY)); // 避開貼地方塊（4~8）
             MakeEnemy(root, d.Eye, PrototypeMapLayout.Local(2, 1, 14f, floorY));
-            MakePickup(root, d.Medkit, PrototypeMapLayout.Local(2, 1, 11f, highPlatY));
+            MakeChest(root, d.ChestGray, PrototypeMapLayout.Local(2, 1, 11f, highPlatY));
             MakeCheckpoint(root, PrototypeMapLayout.Local(3, 1, 4.5f, floorItemY));
 
             // 第 0 排（右 → 左），終點 Boss
-            MakePickup(root, d.Seal, PrototypeMapLayout.Local(3, 0, 1.5f, floorItemY));
+            MakeChest(root, d.ChestBlack, PrototypeMapLayout.Local(3, 0, 1.5f, floorItemY));
             MakeEnemy(root, d.Tentacle, PrototypeMapLayout.Local(3, 0, 3.5f, floorY));
             MakeEnemy(root, d.Tentacle, PrototypeMapLayout.Local(3, 0, 12f, floorY)); // 階梯方塊（13~15.5）左邊
             MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(2, 0, 10f, floorY), FishZone(2));
             MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(2, 0, 13.5f, floorY), FishZone(2));
-            MakePickup(root, d.Pill, PrototypeMapLayout.Local(2, 0, 11f, highPlatY));
+            MakeChest(root, d.ChestBlueGray, PrototypeMapLayout.Local(2, 0, 11f, highPlatY));
             MakeCheckpoint(root, PrototypeMapLayout.Local(1, 0, 12f, floorItemY));
-            MakePickup(root, d.Medkit, PrototypeMapLayout.Local(1, 0, 6f, lowPlatY));
+            MakeChest(root, d.ChestGray, PrototypeMapLayout.Local(1, 0, 6f, lowPlatY));
 
             var boss = MakeBoss(root, PrototypeMapLayout.Local(0, 0, 4f, floorY)); // Boss 也站在地面（F-ENM-00）
             MakeAltar(root, boss, PrototypeMapLayout.Local(0, 0, 10f, 1f));
@@ -506,11 +564,60 @@ namespace DrownedDream.EditorTools
             Wire(cp, ("_renderer", sr));
         }
 
-        /// <summary>在場景放置道具 Prefab。</summary>
-        private static void MakePickup(Transform parent, GameObject prefab, Vector2 pos)
+        /// <summary>在場景放置寶箱 Prefab（itemPos = 原本道具的位置，道具中心比地面高 0.6，寶箱底部貼地）。</summary>
+        private static void MakeChest(Transform parent, GameObject prefab, Vector2 itemPos)
         {
             var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
-            go.transform.position = pos;
+            go.transform.position = itemPos + Vector2.down * 0.6f;
+        }
+
+        /// <summary>載入或建立寶箱基底 Prefab（TreasureChest + Visual 子物件；各顏色為其 Variant）。</summary>
+        private static GameObject ChestBasePrefab()
+        {
+            string path = $"{PrefabDir}/Chests/TreasureChest.prefab";
+            var existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (existing != null) return existing;
+
+            EnsureFolder($"{PrefabDir}/Chests");
+            var go = new GameObject("TreasureChest");
+            var sr = MakeSprite(Child(go.transform, "Visual", Vector2.zero).gameObject, ChestSprite("gray", "closed"), Color.white, 4);
+            var chest = go.AddComponent<TreasureChest>();
+            Wire(chest, ("_renderer", sr));
+
+            var prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
+            Object.DestroyImmediate(go);
+            return prefab;
+        }
+
+        /// <summary>載入或建立寶箱顏色 Variant（綁定關 / 開圖與內容物；已存在則保留企劃調整）。</summary>
+        private static GameObject ChestVariant(GameObject basePrefab, string fileName, string color, GameObject item)
+        {
+            string path = $"{PrefabDir}/Chests/{fileName}.prefab";
+            var existing = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (existing != null) return existing;
+
+            var go = (GameObject)PrefabUtility.InstantiatePrefab(basePrefab);
+            go.name = fileName;
+            var closed = ChestSprite(color, "closed");
+            go.GetComponentInChildren<SpriteRenderer>().sprite = closed;
+            Wire(go.GetComponent<TreasureChest>(),
+                ("_closedSprite", closed),
+                ("_openSprite", ChestSprite(color, "open")),
+                ("_itemPrefab", item.GetComponent<PickupItem>()));
+
+            var prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
+            Object.DestroyImmediate(go);
+            return prefab;
+        }
+
+        /// <summary>匯入並載入寶箱圖（pivot 底部中心，找不到時警告）。</summary>
+        private static Sprite ChestSprite(string color, string state)
+        {
+            string path = $"{ChestArtDir}/chest_{color}_{state}.png";
+            ConfigureSprite(path, ChestPixelsPerUnit, SpriteAlignment.BottomCenter, 512, compressed: true);
+            var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            if (sprite == null) Debug.LogWarning("[DrownedDream] 找不到寶箱圖：" + path);
+            return sprite;
         }
 
         /// <summary>載入或建立道具 Prefab（已存在則保留企劃調整）。</summary>
@@ -534,6 +641,43 @@ namespace DrownedDream.EditorTools
             var prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
             Object.DestroyImmediate(go);
             return prefab;
+        }
+
+        /// <summary>
+        /// 把道具 Prefab 的佔位圓換成正式圖（已換過則略過）。pixelsPerUnit 決定場景中的大小；
+        /// rename = (舊名, 新名)：顯示名稱仍是舊名時改成新名（企劃改過的名稱不動）。
+        /// </summary>
+        private static void ApplyItemArt(GameObject prefab, string spritePath, int pixelsPerUnit, (string from, string to)? rename = null)
+        {
+            ConfigureSprite(spritePath, pixelsPerUnit, SpriteAlignment.Center, 1024, compressed: true);
+            var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(spritePath);
+            if (sprite == null)
+            {
+                Debug.LogWarning("[DrownedDream] 找不到道具圖：" + spritePath);
+                return;
+            }
+
+            string path = AssetDatabase.GetAssetPath(prefab);
+            var root = PrefabUtility.LoadPrefabContents(path);
+            var sr = root.GetComponent<SpriteRenderer>();
+            var item = root.GetComponent<PickupItem>();
+            var so = new SerializedObject(item);
+            var nameProp = so.FindProperty("_displayName");
+            bool needRename = rename.HasValue && nameProp.stringValue == rename.Value.from;
+
+            if (sr.sprite != sprite || needRename)
+            {
+                sr.sprite = sprite;
+                sr.color = Color.white;
+                root.transform.localScale = Vector3.one;
+                if (needRename)
+                {
+                    nameProp.stringValue = rename.Value.to;
+                    so.ApplyModifiedPropertiesWithoutUndo();
+                }
+                PrefabUtility.SaveAsPrefabAsset(root, path);
+            }
+            PrefabUtility.UnloadPrefabContents(root);
         }
 
         /// <summary>建立一般敵人：feet = 地面位置（碰撞框底部貼地）；territory = 活動範圍世界 X（左, 右），null = 不限制。</summary>

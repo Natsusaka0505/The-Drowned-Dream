@@ -57,7 +57,7 @@ namespace DrownedDream
             var s = _player.Status;
             _content.text =
                 $"［武器］魚叉　{s.HarpoonCount} / {s.HarpoonMax}\n      撿回插在牆上的魚叉可補充。\n\n" +
-                $"［關鍵］封印碎片　{s.SealCount} / {s.RequiredSeals}\n      刻有古老符文的石片。集齊即可在祭壇封印邪神。";
+                $"［關鍵］邪神雕像　{s.SealCount} / {s.RequiredSeals}\n      刻有古老符文的邪神雕像。集齊即可在祭壇封印邪神。";
         }
     }
 }

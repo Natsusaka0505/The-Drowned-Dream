@@ -13,7 +13,7 @@
 - F-BOSS-04：封印道具不齊 → Boss 啟動並持續攻擊玩家；Boss 房出口保持開放，玩家可撤退。
 - F-BOSS-05：玩家離開 Boss 房後 Boss 停止追擊（或[待確認]：Boss 是否追出房間）。
 - F-BOSS-06：進入 Boss 房時提示封印道具收集進度。
-- F-BOSS-08：**第一次**進入 Boss 房時，鏡頭切到 Boss 特寫數秒再切回玩家；之後再進入不再播放。【已確認】（依 [script 分類](../../00-overview/原始需求/2026-10-03-script分類.md)）
+- F-BOSS-08：**第一次**進入 Boss 房時，鏡頭切到 Boss 特寫數秒再切回玩家；之後再進入不再播放。【已確認】2026-10-03：鏡頭以平移方式移到 Boss（`GameCamera._switchSmoothTime` 0.5），特寫 3.5 秒（`BossArea._closeUpSeconds`）後平移回玩家。（依 [script 分類](../../00-overview/原始需求/2026-10-03-script分類.md)）
 - F-BOSS-07：Boss 存在時對玩家 SAN 有大範圍影響。
 
 ## 待確認
