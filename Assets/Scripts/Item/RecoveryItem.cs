@@ -30,6 +30,7 @@ namespace DrownedDream
             var status = player.Status;
             if (_sanityRestore > 0d) status.RestoreSanity(_sanityRestore);
             if (_hpRestore > 0d) status.RestoreHp(_hpRestore);
+            GameEvents.RaiseRecoveryUsed();
             GameEvents.ShowMessage(BuildMessage(), 1.5f);
             return true;
         }

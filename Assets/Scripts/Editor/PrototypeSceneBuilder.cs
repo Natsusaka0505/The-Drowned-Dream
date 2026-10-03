@@ -33,6 +33,29 @@ namespace DrownedDream.EditorTools
         public const string ExploreBgmPath = "Assets/Audio/BGM/bgm_explore.wav";
         /// <summary>開場 BGM 路徑。</summary>
         public const string IntroBgmPath = "Assets/Audio/BGM/bgm_intro.wav";
+        /// <summary>音效設定資產路徑。</summary>
+        private const string AudioConfigPath = "Assets/Data/Config/AudioConfig.asset";
+        /// <summary>音效設定欄位 ↔ 音檔路徑 ↔ 是否循環（見 SD-02 音效）。</summary>
+        private static readonly (string field, string path, bool loop)[] AudioClips =
+        {
+            ("_jump", "Assets/Audio/SFX/sfx_jump.wav", false),
+            ("_land", "Assets/Audio/SFX/sfx_land.wav", false),
+            ("_harpoonThrow", "Assets/Audio/SFX/sfx_harpoon_throw.wav", false),
+            ("_breathHold", "Assets/Audio/SFX/sfx_breath_hold.wav", false),
+            ("_eat", "Assets/Audio/SFX/sfx_eat.wav", false),
+            ("_harpoonHit", "Assets/Audio/SFX/sfx_harpoon_hit.wav", false),
+            ("_enemyKill", "Assets/Audio/SFX/sfx_harpoon_hit.wav", false),
+            ("_bossRoar", "Assets/Audio/SFX/sfx_boss_roar.wav", false),
+            ("_sealComplete", "Assets/Audio/SFX/sfx_boss_roar.wav", false),
+            ("_whisper", "Assets/Audio/SFX/sfx_whisper.wav", false),
+            ("_jumpScare", "Assets/Audio/SFX/sfx_jumpscare.wav", false),
+            ("_footsteps", "Assets/Audio/SFX/sfx_footsteps_water_loop.wav", true),
+            ("_caveWind", "Assets/Audio/Ambience/amb_cave_wind.wav", true),
+            ("_lowSanity", "Assets/Audio/Ambience/amb_low_sanity.wav", true),
+            ("_breathLoop", "Assets/Audio/Ambience/amb_breath_hold.wav", true),
+            ("_bossHall", "Assets/Audio/Ambience/amb_boss_hall.wav", true),
+            ("_water", "Assets/Audio/Ambience/amb_water.wav", true),
+        };
 
         /// <summary>地面 Layer。</summary>
         private static int s_groundLayer;
@@ -118,6 +141,8 @@ namespace DrownedDream.EditorTools
             public EnemyData Eye;
             /// <summary>玩家用零摩擦材質（避免黏牆）。</summary>
             public PhysicsMaterial2D NoFriction;
+            /// <summary>音效設定。</summary>
+            public AudioConfig Audio;
         }
 
         /// <summary>載入或建立所有資料資產與道具 Prefab。</summary>
@@ -161,14 +186,14 @@ namespace DrownedDream.EditorTools
 
             d.Seal = ItemPrefab<SealItem>("SealFragment", "封印碎片", new Color(1f, 0.85f, 0.3f), null);
             d.Pill = ItemPrefab<RecoveryItem>("Pill", "鎮靜藥丸", new Color(0.95f, 0.75f, 0.9f),
-                so => Set(so, ("_sanityRestore", 30d), ("_hpRestore", 0d)));
+                so => Set(so, ("_sanityRestore", 20d), ("_hpRestore", 0d)));
             d.Medkit = ItemPrefab<RecoveryItem>("Medkit", "海草繃帶", new Color(0.5f, 1f, 0.6f),
-                so => Set(so, ("_sanityRestore", 0d), ("_hpRestore", 30d)));
+                so => Set(so, ("_sanityRestore", 0d), ("_hpRestore", 20d)));
 
             d.Fish = Asset<EnemyData>($"{DataDir}/Enemies/FishMonster.asset", so => Set(so,
                 ("_displayName", "巡游魚怪"),
                 ("_behaviour", EnemyBehaviour.Patrol),
-                ("_maxHits", 2),
+                ("_maxHits", 3),
                 ("_moveSpeed", 2f),
                 ("_chaseSpeed", 4.5f),
                 ("_patrolDistance", 4f),
@@ -205,7 +230,7 @@ namespace DrownedDream.EditorTools
             d.Eye = Asset<EnemyData>($"{DataDir}/Enemies/AbyssEye.asset", so => Set(so,
                 ("_displayName", "深淵之眼"),
                 ("_behaviour", EnemyBehaviour.Passive),
-                ("_maxHits", 4),
+                ("_maxHits", 3),
                 ("_moveSpeed", 0f),
                 ("_detectRange", 0f),
                 ("_attackRange", 0f),
@@ -223,7 +248,47 @@ namespace DrownedDream.EditorTools
                 d.NoFriction = new PhysicsMaterial2D("PlayerNoFriction") { friction = 0f, bounciness = 0f };
                 AssetDatabase.CreateAsset(d.NoFriction, matPath);
             }
+            d.Audio = Asset<AudioConfig>(AudioConfigPath);
+            FillAudioClips(d.Audio);
             return d;
+        }
+
+        /// <summary>音檔套用匯入設定，並補上 AudioConfig 裡還空著的 clip（已設定的不覆蓋，保留企劃替換）。</summary>
+        private static void FillAudioClips(AudioConfig config)
+        {
+            var so = new SerializedObject(config);
+            foreach (var (field, path, loop) in AudioClips)
+            {
+                var clip = EnsureAudioImport(path, loop);
+                if (clip == null)
+                {
+                    Debug.LogWarning("[DrownedDream] 找不到音效：" + path);
+                    continue;
+                }
+                var p = so.FindProperty($"{field}._clip");
+                if (p != null && p.objectReferenceValue == null) p.objectReferenceValue = clip;
+            }
+            so.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(config);
+        }
+
+        /// <summary>音效匯入設定：單次音效解壓進記憶體（ADPCM，延遲低）；循環音壓縮存放（Vorbis）。</summary>
+        private static AudioClip EnsureAudioImport(string path, bool loop)
+        {
+            if (AssetImporter.GetAtPath(path) is not AudioImporter importer) return null;
+
+            var settings = importer.defaultSampleSettings;
+            var loadType = loop ? AudioClipLoadType.CompressedInMemory : AudioClipLoadType.DecompressOnLoad;
+            var format = loop ? AudioCompressionFormat.Vorbis : AudioCompressionFormat.ADPCM;
+            if (settings.loadType != loadType || settings.compressionFormat != format)
+            {
+                settings.loadType = loadType;
+                settings.compressionFormat = format;
+                settings.quality = 0.6f;
+                importer.defaultSampleSettings = settings;
+                importer.SaveAndReimport();
+            }
+            return AssetDatabase.LoadAssetAtPath<AudioClip>(path);
         }
 
         /// <summary>建立魚叉 Prefab（每次覆蓋）。</summary>
@@ -291,6 +356,9 @@ namespace DrownedDream.EditorTools
             Wire(flow, ("_storyPanel", story));
 
             BuildBgm();
+
+            var audio = new GameObject("GameAudio").AddComponent<GameAudio>();
+            Wire(audio, ("_config", d.Audio));
         }
 
         /// <summary>建立 BGM 播放器並綁定開場 / 探索 BGM（檔案不存在時只警告）。</summary>
@@ -330,44 +398,56 @@ namespace DrownedDream.EditorTools
         {
             var root = new GameObject("Content").transform;
             const float floorItemY = 1.1f;   // 地板上的道具高度
-            const float lowPlatY = 3.6f;      // 低平台（頂 3.0）上的道具高度
-            const float highPlatY = 5.6f;     // 高平台（頂 5.0）上的道具高度
+            const float lowPlatY = 3.1f;      // 貼地方塊（頂 2.5）上的道具高度
+            const float highPlatY = 5.1f;     // 高平台（頂 4.5）上的道具高度
+            const float floorY = 0.5f;        // 地面高度（敵人腳底，F-ENM-00 怪物站在地面）
+            // 一般區塊右側空地（貼地方塊 8 ~ 牆 15.5，扣掉魚怪半寬 0.7）：魚怪只在這段巡邏 / 追擊
+            Vector2 FishZone(int col) => new Vector2(col * PrototypeMapLayout.RoomUnits + 8.7f, col * PrototypeMapLayout.RoomUnits + 14.8f);
 
             // 第 3 排（起點）
-            MakeCheckpoint(root, PrototypeMapLayout.Local(0, 3, 5f, floorItemY));
+            MakeCheckpoint(root, PrototypeMapLayout.Local(0, 3, 2f, floorItemY)); // 避開貼地方塊（4~8）
             MakePickup(root, d.Pill, PrototypeMapLayout.Local(0, 3, 11f, highPlatY));
-            MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(1, 3, 8f, 3f));
-            MakeEnemy(root, d.Eye, PrototypeMapLayout.Local(2, 3, 12f, 11f));
+            MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(1, 3, 10f, floorY), FishZone(1));
+            MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(1, 3, 13.5f, floorY), FishZone(1));
+            MakeEnemy(root, d.Eye, PrototypeMapLayout.Local(2, 3, 12f, floorY));
+            MakeEnemy(root, d.Eye, PrototypeMapLayout.Local(2, 3, 2f, floorY));
             MakePickup(root, d.Seal, PrototypeMapLayout.Local(2, 3, 11f, highPlatY));
             MakeHallucination(root, PrototypeMapLayout.Local(2, 3, 6f, 12f), 1);
             MakePickup(root, d.Medkit, PrototypeMapLayout.Local(3, 3, 12f, floorItemY));
 
             // 第 2 排（右 → 左）
-            MakeEnemy(root, d.Tentacle, PrototypeMapLayout.Local(3, 2, 14.5f, 1.5f));
-            MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(2, 2, 8f, 3f));
+            MakeEnemy(root, d.Tentacle, PrototypeMapLayout.Local(3, 2, 12f, floorY)); // 避開右側階梯方塊
+            MakeEnemy(root, d.Tentacle, PrototypeMapLayout.Local(3, 2, 3f, floorY));  // 守住往左的門
+            MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(2, 2, 10f, floorY), FishZone(2));
+            MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(2, 2, 13.5f, floorY), FishZone(2));
             MakePickup(root, d.Pill, PrototypeMapLayout.Local(2, 2, 11f, highPlatY));
             MakePickup(root, d.Medkit, PrototypeMapLayout.Local(1, 2, 6f, lowPlatY));
-            MakeEnemy(root, d.Eye, PrototypeMapLayout.Local(1, 2, 3f, 11f));
+            MakeEnemy(root, d.Eye, PrototypeMapLayout.Local(1, 2, 3f, floorY));
+            MakeEnemy(root, d.Eye, PrototypeMapLayout.Local(1, 2, 14f, floorY));
             MakeHallucination(root, PrototypeMapLayout.Local(1, 2, 9f, 12f), 2);
             MakeCheckpoint(root, PrototypeMapLayout.Local(0, 2, 12f, floorItemY));
 
             // 第 1 排（左 → 右），(0,1) 有憋氣屏障擋住往右的路
-            MakeBreathGate(root, PrototypeMapLayout.Local(0, 1, 14f, 0.5f), new Vector2(0.5f, 15f));
-            MakePickup(root, d.Seal, PrototypeMapLayout.Local(1, 1, 8f, floorItemY));
-            MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(1, 1, 10f, 3f));
-            MakeEnemy(root, d.Eye, PrototypeMapLayout.Local(2, 1, 8f, 11f));
+            MakeBreathGate(root, PrototypeMapLayout.Local(0, 1, 14f, 0.5f), new Vector2(0.5f, 15f), d.Audio.Water);
+            MakePickup(root, d.Seal, PrototypeMapLayout.Local(1, 1, 9f, floorItemY)); // 避開貼地方塊（4~8）
+            MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(1, 1, 10f, floorY), FishZone(1));
+            MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(1, 1, 13.5f, floorY), FishZone(1));
+            MakeEnemy(root, d.Eye, PrototypeMapLayout.Local(2, 1, 10f, floorY)); // 避開貼地方塊（4~8）
+            MakeEnemy(root, d.Eye, PrototypeMapLayout.Local(2, 1, 14f, floorY));
             MakePickup(root, d.Medkit, PrototypeMapLayout.Local(2, 1, 11f, highPlatY));
             MakeCheckpoint(root, PrototypeMapLayout.Local(3, 1, 4.5f, floorItemY));
 
             // 第 0 排（右 → 左），終點 Boss
             MakePickup(root, d.Seal, PrototypeMapLayout.Local(3, 0, 1.5f, floorItemY));
-            MakeEnemy(root, d.Tentacle, PrototypeMapLayout.Local(3, 0, 3.5f, 1.5f));
-            MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(2, 0, 8f, 3f));
+            MakeEnemy(root, d.Tentacle, PrototypeMapLayout.Local(3, 0, 3.5f, floorY));
+            MakeEnemy(root, d.Tentacle, PrototypeMapLayout.Local(3, 0, 12f, floorY)); // 階梯方塊（13~15.5）左邊
+            MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(2, 0, 10f, floorY), FishZone(2));
+            MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(2, 0, 13.5f, floorY), FishZone(2));
             MakePickup(root, d.Pill, PrototypeMapLayout.Local(2, 0, 11f, highPlatY));
             MakeCheckpoint(root, PrototypeMapLayout.Local(1, 0, 12f, floorItemY));
             MakePickup(root, d.Medkit, PrototypeMapLayout.Local(1, 0, 6f, lowPlatY));
 
-            var boss = MakeBoss(root, PrototypeMapLayout.Local(0, 0, 4f, 9f));
+            var boss = MakeBoss(root, PrototypeMapLayout.Local(0, 0, 4f, floorY)); // Boss 也站在地面（F-ENM-00）
             MakeAltar(root, boss, PrototypeMapLayout.Local(0, 0, 10f, 1f));
             MakeBossArea(root, boss, PrototypeMapLayout.Local(0, 0, 8f, 8f));
         }
@@ -456,12 +536,12 @@ namespace DrownedDream.EditorTools
             return prefab;
         }
 
-        /// <summary>建立一般敵人。</summary>
-        private static void MakeEnemy(Transform parent, EnemyData data, Vector2 pos)
+        /// <summary>建立一般敵人：feet = 地面位置（碰撞框底部貼地）；territory = 活動範圍世界 X（左, 右），null = 不限制。</summary>
+        private static void MakeEnemy(Transform parent, EnemyData data, Vector2 feet, Vector2? territory = null)
         {
             var go = new GameObject($"Enemy_{data.name}") { layer = s_enemyLayer };
             go.transform.SetParent(parent);
-            go.transform.position = pos;
+            go.transform.position = feet + Vector2.up * (data.Size.y / 2f); // 碰撞框底部貼地
             var body = go.AddComponent<Rigidbody2D>();
             body.bodyType = RigidbodyType2D.Kinematic;
             var col = go.AddComponent<BoxCollider2D>();
@@ -474,14 +554,15 @@ namespace DrownedDream.EditorTools
             Wire(status, ("_data", data));
             var ai = go.AddComponent<EnemyAI>();
             Wire(ai, ("_renderer", sr));
+            if (territory.HasValue) Wire(ai, ("_minX", territory.Value.x), ("_maxX", territory.Value.y));
         }
 
-        /// <summary>建立 Boss。</summary>
-        private static BossController MakeBoss(Transform parent, Vector2 pos)
+        /// <summary>建立 Boss（feet = 地面位置；碰撞框高 6，底部貼地）。</summary>
+        private static BossController MakeBoss(Transform parent, Vector2 feet)
         {
             var go = new GameObject("Boss") { layer = s_enemyLayer };
             go.transform.SetParent(parent);
-            go.transform.position = pos;
+            go.transform.position = feet + Vector2.up * 3f;
             var col = go.AddComponent<BoxCollider2D>();
             col.size = new Vector2(4f, 6f);
             col.isTrigger = true;
@@ -515,9 +596,18 @@ namespace DrownedDream.EditorTools
             Wire(area, ("_boss", boss));
         }
 
-        /// <summary>建立憋氣屏障（左下角位置 + 尺寸）。</summary>
-        private static void MakeBreathGate(Transform parent, Vector2 bottomLeft, Vector2 size)
+        /// <summary>建立憋氣屏障（左下角位置 + 尺寸），並在底部附近放水聲（靠近才聽得到）。</summary>
+        private static void MakeBreathGate(Transform parent, Vector2 bottomLeft, Vector2 size, LoopEntry water)
         {
+            if (water != null && water.Clip != null)
+            {
+                var sound = new GameObject("BreathGateWater");
+                sound.transform.SetParent(parent);
+                sound.transform.position = bottomLeft + new Vector2(size.x / 2f, 2f);
+                var emitter = sound.AddComponent<AmbientEmitter>();
+                Wire(emitter, ("_clip", water.Clip), ("_volume", water.Volume));
+            }
+
             var go = new GameObject("BreathGate") { layer = s_groundLayer };
             go.transform.SetParent(parent);
             go.transform.position = bottomLeft + size / 2f;

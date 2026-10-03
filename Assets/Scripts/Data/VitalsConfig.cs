@@ -24,19 +24,27 @@ namespace DrownedDream
         [SerializeField] private float _invincibleTime = 1f;
         /// <summary>受傷後無敵秒數（唯讀）</summary>
         public float InvincibleTime => _invincibleTime;
+        /// <summary>被怪物（含 Boss 子彈）打中一次 HP 直接歸零（關閉 = 依傷害扣血）</summary>
+        [SerializeField] private bool _enemyHitIsLethal = true;
+        /// <summary>被怪物打中一次 HP 直接歸零（唯讀）</summary>
+        public bool EnemyHitIsLethal => _enemyHitIsLethal;
 
         [Header("氧氣")]
         /// <summary>氧氣上限（洞窟內沒有任何補氧方式，只有復活時回滿）</summary>
         [SerializeField] private float _maxOxygen = 100f;
         /// <summary>氧氣上限（洞窟內沒有任何補氧方式，只有復活時回滿）（唯讀）</summary>
         public float MaxOxygen => _maxOxygen;
+        /// <summary>[待確認] SAN 0 時氧氣上限剩基礎上限的比例（依 SAN 百分比線性，F-OXY-06）</summary>
+        [Range(0f, 1f)] [SerializeField] private float _minOxygenRatio = 0.5f;
+        /// <summary>SAN 0 時氧氣上限比例（唯讀）</summary>
+        public float MinOxygenRatio => _minOxygenRatio;
         /// <summary>憋氣時每秒消耗氧氣（正常呼吸不消耗）</summary>
         [SerializeField] private float _oxygenDrainPerSecond = 1f;
         /// <summary>憋氣時每秒消耗氧氣（唯讀）</summary>
         public float OxygenDrainPerSecond => _oxygenDrainPerSecond;
-        /// <summary>氧氣歸零後仍憋氣時每秒扣 HP</summary>
-        [SerializeField] private float _hpDrainWhenNoOxygen = 10f;
-        /// <summary>氧氣歸零後仍憋氣時每秒扣 HP（唯讀）</summary>
+        /// <summary>氧氣歸零時每秒扣 HP（不論是否憋氣）</summary>
+        [SerializeField] private float _hpDrainWhenNoOxygen = 20f;
+        /// <summary>氧氣歸零時每秒扣 HP（唯讀）</summary>
         public float HpDrainWhenNoOxygen => _hpDrainWhenNoOxygen;
 
         [Header("死亡 / 復活（F-DTH）")]
@@ -44,16 +52,16 @@ namespace DrownedDream
         [SerializeField] private float _respawnDelay = 1.5f;
         /// <summary>死亡到復活的演出秒數（唯讀）</summary>
         public float RespawnDelay => _respawnDelay;
-        /// <summary>[待確認] 復活時最大 SAN 的處理方案</summary>
+        /// <summary>復活時最大 SAN 的處理方案（已確認：方案 A）</summary>
         [SerializeField] private RespawnSanityMode _sanityMode = RespawnSanityMode.ReduceMax;
-        /// <summary>[待確認] 復活時最大 SAN 的處理方案（唯讀）</summary>
+        /// <summary>復活時最大 SAN 的處理方案（唯讀）</summary>
         public RespawnSanityMode SanityMode => _sanityMode;
         /// <summary>方案 A：每次復活最大 SAN 下降量</summary>
-        [SerializeField] private float _maxSanityPenalty = 10f;
+        [SerializeField] private float _maxSanityPenalty = 25f;
         /// <summary>方案 A：每次復活最大 SAN 下降量（唯讀）</summary>
         public float MaxSanityPenalty => _maxSanityPenalty;
         /// <summary>方案 A：最大 SAN 下限</summary>
-        [SerializeField] private float _minMaxSanity = 30f;
+        [SerializeField] private float _minMaxSanity = 25f;
         /// <summary>方案 A：最大 SAN 下限（唯讀）</summary>
         public float MinMaxSanity => _minMaxSanity;
         /// <summary>[待確認] 死亡時是否歸還場上所有魚叉</summary>

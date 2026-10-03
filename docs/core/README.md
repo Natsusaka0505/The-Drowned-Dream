@@ -26,14 +26,14 @@
 
 area / 回復道具 / 武器 / camera 規模小，Status 與 Action 寫在同一個腳本，以 `#region Status` / `#region Action` 分段。
 
-分類以外但需求（SA）要求的系統：`PlayerRespawn`（死亡復活）、`PlayerConfusion`（低 SAN 方向錯亂）、`FearSource`（恐懼範圍）、`BossController`（Boss）、`Room`（地圖區塊）、`Checkpoint`、`BreathGate`、`SanityStageObject`、`GameFlow`、`BgmPlayer`（背景音樂）、UI。
+分類以外但需求（SA）要求的系統：`PlayerRespawn`（死亡復活）、`PlayerConfusion`（低 SAN 精神錯亂）、`FearSource`（恐懼範圍）、`BossController`（Boss）、`Room`（地圖區塊）、`Checkpoint`、`BreathGate`、`SanityStageObject`、`GameFlow`、`BgmPlayer`（背景音樂）、UI。
 
 ## 資料夾
 
 ```
 Assets/Scripts/
   Core/      GameFlow、GameEvents、IDamageable
-  Data/      ScriptableObject 定義（Config、EnemyData、MapConfig、TerrainTileSet）
+  Data/      ScriptableObject 定義（Config、EnemyData、MapConfig、TerrainTileSet、AudioConfig）
   Player/    PlayerStatus + 各 Action、Player（入口）、PlayerInputReader
   Enemy/     EnemyStatus、EnemyAI、FearSource、BossController、BossProjectile
   Area/      BossArea、SealAltar
@@ -41,7 +41,7 @@ Assets/Scripts/
   Weapon/    Harpoon
   Camera/    GameCamera
   World/     Room、Checkpoint、BreathBonusZone、BreathGate、SanityStageObject
-  Audio/     BgmPlayer
+  Audio/     BgmPlayer、GameAudio（音效 + 環境音）、AmbientEmitter（位置循環音）
   UI/        HUD、InventoryPanel、StoryPanel、SanityScreenEffects、UIFactory
   Editor/    場景 / 地圖產生器（含地形自動貼圖）
 ```
@@ -56,7 +56,9 @@ Assets/Scripts/
 ## 溝通方式
 
 - 玩家入口：`Player.Instance`，可取得 Status 與各 Action。
-- 跨系統事件：`GameEvents`（提示訊息、死亡、復活、封印、流程狀態切換）。`BgmPlayer` 訂閱 `GameStateChanged`：開場放開場曲，進入遊玩後淡出 → 換探索曲。
+- 玩家輸入：`PlayerInputReader` 讀原始按鍵；`PlayerMove` / `PlayerAttack` 一律讀 `PlayerConfusion` 的「錯亂後輸入」（`MoveX`、`JumpPressed`、`JumpHeld`、`FirePressed`），精神錯亂時才會被替換 / 延遲（F-SAN-11）。
+- 跨系統事件：`GameEvents`（提示訊息、死亡、復活、封印、流程狀態切換、敵人被命中、使用回復道具、Boss 現身 / 啟動）。
+- 音效：`GameAudio` 只**訂閱事件**播放（`GameEvents` + 玩家元件事件：`PlayerMove.Jumped/Landed`、`PlayerAttack.Thrown`、`PlayerBreath.StateChanged`、`PlayerConfusion.WarningStarted`、`PlayerStatus.SanityStageChanged`），遊戲邏輯不直接呼叫音效。見 [SD-02 音效](../feature/需求/00-overview/SD/SD-02-audio.md)。`BgmPlayer` 訂閱 `GameStateChanged`：開場放開場曲，進入遊玩後淡出 → 換探索曲；另外每幀比對 `GameFlow.State` 該播的曲子，漏接事件（例如 Play 中重新編譯）也會自動切回。
 - Status 變動事件：例如 `PlayerStatus.HpChanged`，UI 訂閱顯示。
 - 可被魚叉命中的對象實作 `IDamageable.TakeHit()`。
 

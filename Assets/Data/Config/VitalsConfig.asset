@@ -14,11 +14,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DrownedDream.VitalsConfig
   _maxHp: 100
   _invincibleTime: 1
+  _enemyHitIsLethal: 1
   _maxOxygen: 100
+  _minOxygenRatio: 0.5
   _oxygenDrainPerSecond: 1
-  _hpDrainWhenNoOxygen: 10
+  _hpDrainWhenNoOxygen: 20
   _respawnDelay: 1.5
   _sanityMode: 0
-  _maxSanityPenalty: 10
-  _minMaxSanity: 30
+  _maxSanityPenalty: 25
+  _minMaxSanity: 25
   _returnHarpoonsOnDeath: 1

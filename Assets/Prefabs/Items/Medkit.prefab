@@ -145,4 +145,4 @@ MonoBehaviour:
   _bobHeight: 0.15
   _bobSpeed: 2
   _sanityRestore: 0
-  _hpRestore: 30
+  _hpRestore: 20

@@ -29,6 +29,10 @@ namespace DrownedDream
 
         /// <summary>外觀 Renderer。</summary>
         [SerializeField] private SpriteRenderer _renderer;
+        /// <summary>活動範圍左界（世界 X）；左界 ≥ 右界時不限制。巡邏與追擊都不會超出（避免穿牆 / 穿過地面方塊）。</summary>
+        [SerializeField] private float _minX;
+        /// <summary>活動範圍右界（世界 X）。</summary>
+        [SerializeField] private float _maxX;
 
         /// <summary>敵人數值。</summary>
         private EnemyStatus _status;
@@ -183,6 +187,7 @@ namespace DrownedDream
         /// <summary>只沿 X 軸移向目標，回傳是否已抵達。</summary>
         private bool MoveHorizontally(float targetX)
         {
+            if (_maxX > _minX) targetX = Mathf.Clamp(targetX, _minX, _maxX); // 限制在活動範圍內
             Vector2 pos = _body.position;
             float step = (float)_status.MoveSpeed * Time.deltaTime;
             float newX = Mathf.MoveTowards(pos.x, targetX, step);

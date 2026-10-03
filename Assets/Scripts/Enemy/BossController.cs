@@ -64,6 +64,7 @@ namespace DrownedDream
             if (IsSealed || IsActive) return;
             IsActive = true;
             _fireTimer = _fireInterval;
+            GameEvents.RaiseBossActivated();
         }
 
         /// <summary>停止 Boss（玩家離房）。</summary>

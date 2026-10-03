@@ -10,6 +10,10 @@ namespace DrownedDream
         [SerializeField] private float _maxHoldTime = 5f;
         /// <summary>憋氣最大秒數（肺活量）（唯讀）</summary>
         public float MaxHoldTime => _maxHoldTime;
+        /// <summary>[待確認] SAN 0 時最大憋氣時間剩基礎值的比例（依 SAN 百分比線性，F-BRE-02）</summary>
+        [Range(0f, 1f)] [SerializeField] private float _minHoldRatio = 0.4f;
+        /// <summary>SAN 0 時最大憋氣時間比例（唯讀）</summary>
+        public float MinHoldRatio => _minHoldRatio;
         /// <summary>完整憋氣後的 CD 秒數</summary>
         [SerializeField] private float _cooldown = 8f;
         /// <summary>完整憋氣後的 CD 秒數（唯讀）</summary>

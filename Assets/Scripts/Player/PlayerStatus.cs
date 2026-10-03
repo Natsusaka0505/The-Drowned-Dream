@@ -50,8 +50,8 @@ namespace DrownedDream
         /// <summary>目前 SAN 分段（變動時才發事件）。</summary>
         private int _sanityStage;
 
-        /// <summary>氧氣上限。</summary>
-        public double OxygenMax => _vitals.MaxOxygen;
+        /// <summary>氧氣上限：SAN 越低越低（F-OXY-06），SAN 0 時為基礎上限 × MinOxygenRatio。</summary>
+        public double OxygenMax => _vitals.MaxOxygen * (_vitals.MinOxygenRatio + (1d - _vitals.MinOxygenRatio) * Math.Clamp(SanityRatio, 0d, 1d));
         /// <summary>HP 上限。</summary>
         public double HpMax => _vitals.MaxHp;
         /// <summary>基礎 SAN 最大值（分段百分比以此計算）。</summary>
@@ -103,9 +103,9 @@ namespace DrownedDream
         private void Awake()
         {
             Hp = HpMax;
-            Oxygen = OxygenMax;
             SanityMax = SanityBaseMax;
             Sanity = SanityMax;
+            Oxygen = OxygenMax; // 氧氣上限依 SAN 計算，必須在 SAN 之後初始化
             MoveSpeed = _movement.MaxSpeed;
             HarpoonCount = HarpoonMax;
         }
@@ -130,7 +130,7 @@ namespace DrownedDream
         {
             if (!IsAlive || IsInvincible || damage <= 0d) return false;
             _invincibleTimer = _vitals.InvincibleTime;
-            SetHp(Hp - damage);
+            SetHp(_vitals.EnemyHitIsLethal ? 0d : Hp - damage); // 一擊致死（F-ENM-05）
             Damaged?.Invoke();
             return true;
         }
@@ -175,8 +175,8 @@ namespace DrownedDream
                 SanityMax = Math.Max(_vitals.MinMaxSanity, SanityMax - _vitals.MaxSanityPenalty);
             }
             SetHp(HpMax);
-            SetOxygen(OxygenMax);
             SetSanity(SanityMax);
+            SetOxygen(OxygenMax); // 氧氣上限依 SAN 計算，先回 SAN 再補滿氧氣
             if (_vitals.ReturnHarpoonsOnDeath) AddHarpoons(HarpoonMax);
         }
 
@@ -190,23 +190,22 @@ namespace DrownedDream
             SetFlashVisible(_invincibleTimer <= 0d || Mathf.Repeat((float)_invincibleTimer, 0.15f) > 0.075f);
         }
 
-        /// <summary>只有憋氣時耗氧（F-OXY-02）；氧氣歸零後仍憋氣則改扣 HP（不觸發無敵）。</summary>
+        /// <summary>只有憋氣時耗氧（F-OXY-02）；氧氣歸零時不論是否憋氣都扣 HP（F-OXY-05，不觸發無敵）。</summary>
         private void UpdateOxygen(double dt)
         {
-            if (!IsHoldingBreath) return;
             if (Oxygen <= 0d)
             {
                 SetHp(Hp - _vitals.HpDrainWhenNoOxygen * dt);
                 return;
             }
-            SetOxygen(Oxygen - _vitals.OxygenDrainPerSecond * dt);
+            if (IsHoldingBreath) SetOxygen(Oxygen - _vitals.OxygenDrainPerSecond * dt);
         }
 
         /// <summary>恐懼範圍內掉 SAN，離開後恢復。</summary>
         private void UpdateSanity(double dt)
         {
             double drain = 0d;
-            if (_sanityConfig.DrainWhileInvisible || !IsHoldingBreath) drain = FearSource.TotalDrainAt(transform.position);
+            if (_sanityConfig.DrainWhileInvisible || !IsHoldingBreath) drain = FearSource.TotalDrainAt(transform.position) * _sanityConfig.DrainMultiplier;
             InFear = drain > 0d;
 
             if (InFear) SetSanity(Sanity - drain * dt);
@@ -238,6 +237,9 @@ namespace DrownedDream
         {
             Sanity = Math.Clamp(value, 0d, SanityMax);
             SanityChanged?.Invoke(Sanity, SanityMax, SanityBaseMax);
+            // 氧氣上限跟著 SAN 變（F-OXY-06）：超過新上限就壓下來，並通知 UI 更新上限
+            Oxygen = Math.Min(Oxygen, OxygenMax);
+            OxygenChanged?.Invoke(Oxygen, OxygenMax);
 
             int stage = 0;
             var thresholds = _sanityConfig.StageThresholds;

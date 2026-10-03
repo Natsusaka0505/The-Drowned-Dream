@@ -67,7 +67,7 @@ namespace DrownedDream
             if (_player == null) return;
             _player.Status.SanityStageChanged += s => _stage = Mathf.Clamp(s, 0, _stageTints.Length - 1);
             _player.Confusion.WarningStarted += OnWarning;
-            _player.Confusion.ConfusionStarted += () => GameEvents.ShowMessage("方向錯亂！", 1.5f);
+            _player.Confusion.ConfusionStarted += () => GameEvents.ShowMessage("精神錯亂！", 1.5f);
         }
 
         /// <summary>開始預告閃爍。</summary>
