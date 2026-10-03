@@ -190,15 +190,16 @@ namespace DrownedDream
             SetFlashVisible(_invincibleTimer <= 0d || Mathf.Repeat((float)_invincibleTimer, 0.15f) > 0.075f);
         }
 
-        /// <summary>呼吸時耗氧；氧氣歸零改扣 HP（不觸發無敵）。</summary>
+        /// <summary>只有憋氣時耗氧（F-OXY-02）；氧氣歸零後仍憋氣則改扣 HP（不觸發無敵）。</summary>
         private void UpdateOxygen(double dt)
         {
+            if (!IsHoldingBreath) return;
             if (Oxygen <= 0d)
             {
                 SetHp(Hp - _vitals.HpDrainWhenNoOxygen * dt);
                 return;
             }
-            if (!IsHoldingBreath) SetOxygen(Oxygen - _vitals.OxygenDrainPerSecond * dt);
+            SetOxygen(Oxygen - _vitals.OxygenDrainPerSecond * dt);
         }
 
         /// <summary>恐懼範圍內掉 SAN，離開後恢復。</summary>

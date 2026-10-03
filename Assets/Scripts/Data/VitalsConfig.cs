@@ -30,13 +30,13 @@ namespace DrownedDream
         [SerializeField] private float _maxOxygen = 100f;
         /// <summary>氧氣上限（洞窟內沒有任何補氧方式，只有復活時回滿）（唯讀）</summary>
         public float MaxOxygen => _maxOxygen;
-        /// <summary>呼吸狀態每秒消耗氧氣</summary>
+        /// <summary>憋氣時每秒消耗氧氣（正常呼吸不消耗）</summary>
         [SerializeField] private float _oxygenDrainPerSecond = 1f;
-        /// <summary>呼吸狀態每秒消耗氧氣（唯讀）</summary>
+        /// <summary>憋氣時每秒消耗氧氣（唯讀）</summary>
         public float OxygenDrainPerSecond => _oxygenDrainPerSecond;
-        /// <summary>氧氣歸零時每秒扣 HP</summary>
+        /// <summary>氧氣歸零後仍憋氣時每秒扣 HP</summary>
         [SerializeField] private float _hpDrainWhenNoOxygen = 10f;
-        /// <summary>氧氣歸零時每秒扣 HP（唯讀）</summary>
+        /// <summary>氧氣歸零後仍憋氣時每秒扣 HP（唯讀）</summary>
         public float HpDrainWhenNoOxygen => _hpDrainWhenNoOxygen;
 
         [Header("死亡 / 復活（F-DTH）")]
