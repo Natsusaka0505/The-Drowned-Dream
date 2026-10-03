@@ -31,6 +31,8 @@ namespace DrownedDream.EditorTools
         public const string MapConfigPath = "Assets/Data/Map/MapConfig.asset";
         /// <summary>探索 BGM 路徑。</summary>
         public const string ExploreBgmPath = "Assets/Audio/BGM/bgm_explore.wav";
+        /// <summary>開場 BGM 路徑。</summary>
+        public const string IntroBgmPath = "Assets/Audio/BGM/bgm_intro.wav";
 
         /// <summary>地面 Layer。</summary>
         private static int s_groundLayer;
@@ -290,14 +292,16 @@ namespace DrownedDream.EditorTools
             BuildBgm();
         }
 
-        /// <summary>建立 BGM 播放器並綁定探索 BGM（檔案不存在時只警告）。</summary>
+        /// <summary>建立 BGM 播放器並綁定開場 / 探索 BGM（檔案不存在時只警告）。</summary>
         private static void BuildBgm()
         {
-            var clip = EnsureBgmImport(ExploreBgmPath);
-            if (clip == null) Debug.LogWarning("[DrownedDream] 找不到 BGM：" + ExploreBgmPath);
+            var intro = EnsureBgmImport(IntroBgmPath);
+            var explore = EnsureBgmImport(ExploreBgmPath);
+            if (intro == null) Debug.LogWarning("[DrownedDream] 找不到 BGM：" + IntroBgmPath);
+            if (explore == null) Debug.LogWarning("[DrownedDream] 找不到 BGM：" + ExploreBgmPath);
 
             var bgm = new GameObject("BGM").AddComponent<BgmPlayer>();
-            Wire(bgm, ("_clip", clip));
+            Wire(bgm, ("_introClip", intro), ("_exploreClip", explore));
         }
 
         /// <summary>BGM 匯入設定：串流載入 + Vorbis 壓縮（WAV 原檔太大，不整首解壓進記憶體）。</summary>

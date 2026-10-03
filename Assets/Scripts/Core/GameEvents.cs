@@ -13,6 +13,8 @@ namespace DrownedDream
         public static event Action PlayerRespawned;
         /// <summary>Boss 封印成功 → 結局。</summary>
         public static event Action BossSealed;
+        /// <summary>遊戲流程狀態切換（開場 / 遊玩 / 暫停 / 結局）。</summary>
+        public static event Action<GameState> GameStateChanged;
 
         /// <summary>顯示畫面提示文字。</summary>
         public static void ShowMessage(string text, float duration = 2.5f) => MessageRequested?.Invoke(text, duration);
@@ -22,5 +24,7 @@ namespace DrownedDream
         public static void RaisePlayerRespawned() => PlayerRespawned?.Invoke();
         /// <summary>發出 Boss 封印成功事件。</summary>
         public static void RaiseBossSealed() => BossSealed?.Invoke();
+        /// <summary>發出流程狀態切換事件。</summary>
+        public static void RaiseGameStateChanged(GameState state) => GameStateChanged?.Invoke(state);
     }
 }

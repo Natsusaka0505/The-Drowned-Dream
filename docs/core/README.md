@@ -56,7 +56,7 @@ Assets/Scripts/
 ## 溝通方式
 
 - 玩家入口：`Player.Instance`，可取得 Status 與各 Action。
-- 跨系統事件：`GameEvents`（提示訊息、死亡、復活、封印）。
+- 跨系統事件：`GameEvents`（提示訊息、死亡、復活、封印、流程狀態切換）。`BgmPlayer` 訂閱 `GameStateChanged`：開場放開場曲，進入遊玩後淡出 → 換探索曲。
 - Status 變動事件：例如 `PlayerStatus.HpChanged`，UI 訂閱顯示。
 - 可被魚叉命中的對象實作 `IDamageable.TakeHit()`。
 

@@ -129,6 +129,7 @@ namespace DrownedDream
         {
             _state = state;
             Time.timeScale = state == GameState.Playing ? 1f : 0f;
+            GameEvents.RaiseGameStateChanged(state);
         }
     }
 }
