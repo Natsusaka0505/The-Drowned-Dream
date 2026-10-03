@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -120,7 +121,7 @@ namespace DrownedDream
         }
 
         /// <summary>更新 HP 條。</summary>
-        private void OnHealth(double c, double m) => _hp.Set((float)(c / m), $"HP  {c:0} / {m:0}");
+        private void OnHealth(double c, double m) => _hp.Set((float)(c / m), $"HP  {Math.Ceiling(c):0} / {m:0}"); // 無條件進位：還活著就不會顯示 0
 
         /// <summary>更新氧氣泡泡（依目前氧氣 / 目前上限的百分比）。</summary>
         private void OnOxygen(double c, double m) => _oxygen.Set(m > 0d ? (float)(c / m) : 0f);

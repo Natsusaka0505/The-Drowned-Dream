@@ -21,6 +21,8 @@ namespace DrownedDream
         public static event Action RecoveryUsed;
         /// <summary>第一次進 Boss 房、鏡頭特寫 Boss。</summary>
         public static event Action BossRevealed;
+        /// <summary>Boss 咆哮（攻擊）。</summary>
+        public static event Action BossRoared;
         /// <summary>Boss 啟動（開始攻擊）。</summary>
         public static event Action BossActivated;
 
@@ -40,6 +42,8 @@ namespace DrownedDream
         public static void RaiseRecoveryUsed() => RecoveryUsed?.Invoke();
         /// <summary>發出 Boss 現身（第一次特寫）事件。</summary>
         public static void RaiseBossRevealed() => BossRevealed?.Invoke();
+        /// <summary>發出 Boss 咆哮事件。</summary>
+        public static void RaiseBossRoared() => BossRoared?.Invoke();
         /// <summary>發出 Boss 啟動事件。</summary>
         public static void RaiseBossActivated() => BossActivated?.Invoke();
     }

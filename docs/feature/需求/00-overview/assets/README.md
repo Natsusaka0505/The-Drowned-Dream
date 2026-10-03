@@ -19,13 +19,14 @@
 
 | 素材 | 尺寸（px） | 備註 |
 |---|---|---|
-| 主角 | 約 24×48 | 待機、走路、跳躍、憋氣（半透明由程式處理）、受傷 |
+| 主角 | 約 24×48 | 2026-10-04 已交付：左 / 右走路各 6 格、左 / 右跳躍各 7 格（原圖 2192×2156，裁成同一框後縮 1/4，放在 `Assets/Art/Player/{walk,jump}_{r,l}_N.png`）。站立暫用走路第 1 格。`動畫.clip` 是 Clip Studio Paint 檔，Unity 無法使用。`[待確認]` 請美術補：站立、下墜、憋氣、受傷、發射；右跳原檔命名為 2~7 + 5a、左跳為 0001~0007，建議統一 |
 | 魚叉 | 約 32×8 | 飛行 / 插住 |
 | 巡游魚怪 | 約 45×26 | 巡邏、衝撞 |
-| 觸手 | 約 26×64 | 待機、蓄力、伸長攻擊 |
-| 深淵之眼 | 約 38×38 | 待機（可眨眼） |
-| Boss | 約 144×208 | 待機、攻擊、被封印 |
+| 觸手（海蝶） | 約 26×64 | 2026-10-04 程式依美術參考圖繪製的暫用圖：海蝶拍翅 4 格 `Assets/Art/Enemies/seabutterfly_0~3.png`、攻擊觸鬚 `tendril.png`；美術交正式圖後替換同名檔 |
+| 深淵之眼（眼球） | 約 38×38 | 2026-10-04 程式繪製暫用圖（分層）：眼白 `eye_base.png`、瞳孔 `eye_iris.png`（追視玩家）、眼皮眨眼 4 格 `eye_lid_0~3.png`，在 `Assets/Art/Enemies/` |
+| Boss | 約 144×208 | 2026-10-04：待機動畫已交付 `boss.gif`（1280×720、33 格），拆格放在 `Assets/Art/Boss/`。`[待確認]` 請美術補 PNG 序列圖（全彩、半透明邊緣）；攻擊 / 被封印動畫尚無 |
 | 邪神雕像（封印道具）/ 鎮靜藥丸 / 海草繃帶 | 約 20×20 | 場景圖示。2026-10-03 已交付：`Assets/Art/Items/item_idol.png`、`item_pill.png`、`item_bandage.png`（原檔裁掉透明邊並縮圖） |
+| 落雷 / 光束特效 | 2026-10-04：使用素材包 FX Lightning II free（`Assets/FX_Kandol_Pack/FX_lightning_II`）：落雷 `Prefabs/fx_lightning_02.prefab`、深淵之眼光束 `Prefabs/fx_lightning_01.prefab`。素材包材質為 built-in 管線，在 URP 下若顯示粉紅色需換 Shader |
 | 寶箱（灰 / 藍灰 / 黑，各有關 / 開） | 約 195×176 | 2026-10-03 由 `ArtSource/map_objects.png` 切出並去背：`Assets/Art/Chests/chest_{gray,bluegray,black}_{closed,open}.png`，同色關 / 開同尺寸、底部對齊 |
 | 存檔點 | 約 16×38 | 未啟用 / 啟用 |
 | 封印祭壇 | 約 64×32 | |

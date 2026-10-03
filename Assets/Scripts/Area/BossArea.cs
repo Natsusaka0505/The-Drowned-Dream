@@ -5,7 +5,7 @@ namespace DrownedDream
 {
     /// <summary>
     /// area（docs/core）：Boss 房。放在 Boss 房內，執行時自動找出所在的 Room。
-    /// 第一次進房 → 鏡頭特寫 Boss 數秒再切回玩家；道具不齊 → Boss 啟動；離房 → Boss 停止（F-BOSS-02/04/05/06）。
+    /// 第一次進房 → 鏡頭特寫 Boss 數秒再切回玩家；進房 → Boss 啟動（不論道具是否集齊）；離房 → Boss 停止（F-BOSS-02/04/05/06）。
     /// </summary>
     public class BossArea : MonoBehaviour
     {
@@ -89,16 +89,13 @@ namespace DrownedDream
             if (PlayerInside) AnnounceAndActivate(player);
         }
 
-        /// <summary>提示封印進度；道具不齊則啟動 Boss。</summary>
+        /// <summary>提示封印進度並啟動 Boss（不論道具是否集齊都會攻擊，2026-10-04 改）。</summary>
         private void AnnounceAndActivate(Player player)
         {
             var status = player.Status;
-            if (status.HasAllSeals)
-            {
-                GameEvents.ShowMessage($"封印道具已齊（{status.SealCount}/{status.RequiredSeals}）——前往祭壇按 E 封印", 3f);
-                return;
-            }
-            GameEvents.ShowMessage($"封印道具不足（{status.SealCount}/{status.RequiredSeals}）……牠醒了！", 3f);
+            GameEvents.ShowMessage(status.HasAllSeals
+                ? $"封印道具已齊（{status.SealCount}/{status.RequiredSeals}）——在牠的攻擊下前往祭壇按 E 封印！"
+                : $"封印道具不足（{status.SealCount}/{status.RequiredSeals}）……牠醒了！", 3f);
             _boss.Activate();
         }
 

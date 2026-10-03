@@ -63,6 +63,7 @@ namespace DrownedDream
             GameEvents.RecoveryUsed += OnRecoveryUsed;
             GameEvents.BossRevealed += OnBossRoar;
             GameEvents.BossActivated += OnBossRoar;
+            GameEvents.BossRoared += OnBossRoar;
             GameEvents.BossSealed += OnBossSealed;
         }
 
@@ -73,6 +74,7 @@ namespace DrownedDream
             GameEvents.RecoveryUsed -= OnRecoveryUsed;
             GameEvents.BossRevealed -= OnBossRoar;
             GameEvents.BossActivated -= OnBossRoar;
+            GameEvents.BossRoared -= OnBossRoar;
             GameEvents.BossSealed -= OnBossSealed;
         }
 

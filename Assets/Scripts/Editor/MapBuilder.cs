@@ -66,9 +66,19 @@ namespace DrownedDream.EditorTools
 
             BuildFarBackground(config, root.transform);
             BuildBackground(config, root.transform);
-            var solid = SampleSolid(config);
+            var solid = SampleSolid(config, out var platforms);
             BuildCollision(root.transform, groundLayer, tileSprite, solid);
-            BuildTerrain(config, root.transform, solid);
+            BuildPlatforms(root.transform, groundLayer, tileSprite, platforms);
+            // 地形貼圖：牆與單向平台都要畫出來
+            if (solid != null && platforms != null)
+            {
+                for (int x = 0; x < solid.GetLength(0); x++)
+                {
+                    for (int y = 0; y < solid.GetLength(1); y++) solid[x, y] |= platforms[x, y];
+                }
+            }
+            // 用美術圖透明度當碰撞時，美術圖本身就是地形，不再自動貼地形圖塊
+            if (!config.CollisionFromMapAlpha) BuildTerrain(config, root.transform, solid);
             return BuildRooms(config, root.transform);
         }
 
@@ -104,24 +114,39 @@ namespace DrownedDream.EditorTools
             EditorBuildUtil.Wire(parallax, ("_mapMin", Vector2.zero), ("_mapSize", size), ("_follow", config.ParallaxFollow));
         }
 
-        /// <summary>讀取遮罩圖，回傳每格是否實心（[x, y]，y = 0 為最下排）；沒有遮罩回傳 null。</summary>
-        private static bool[,] SampleSolid(MapConfig config)
+        /// <summary>
+        /// 讀取碰撞來源，回傳每格是否實心（[x, y]，y = 0 為最下排）；沒有來源回傳 null。
+        /// 勾選 CollisionFromMapAlpha 時用地圖美術圖的透明度（不透明 = 牆），否則用黑白遮罩圖（黑 = 牆）。
+        /// </summary>
+        private static bool[,] SampleSolid(MapConfig config, out bool[,] platforms)
         {
-            if (config.CollisionMask == null)
+            platforms = null;
+            bool fromAlpha = config.CollisionFromMapAlpha;
+            var source = fromAlpha ? config.MapTexture : config.CollisionMask;
+            if (source == null)
             {
-                Debug.LogError("[DrownedDream] MapConfig 沒有碰撞遮罩圖");
+                Debug.LogError(fromAlpha ? "[DrownedDream] MapConfig 沒有地圖美術圖，無法用透明度產生碰撞" : "[DrownedDream] MapConfig 沒有碰撞遮罩圖");
                 return null;
             }
 
-            var mask = ReadTexture(config.CollisionMask);
+            var mask = ReadTexture(source);
             int cell = config.MaskCellPixels;
             var solid = new bool[mask.width / cell, mask.height / cell];
+            platforms = new bool[solid.GetLength(0), solid.GetLength(1)];
             for (int cy = 0; cy < solid.GetLength(1); cy++)
             {
                 for (int cx = 0; cx < solid.GetLength(0); cx++)
                 {
                     var c = mask.GetPixel(cx * cell + cell / 2, cy * cell + cell / 2);
-                    solid[cx, cy] = c.grayscale < config.WallThreshold && c.a > 0.5f;
+                    if (fromAlpha)
+                    {
+                        solid[cx, cy] = c.a > config.AlphaThreshold;
+                        continue;
+                    }
+                    bool dark = c.grayscale < config.WallThreshold && c.a > 0.5f;
+                    bool platform = dark && c.grayscale >= config.PlatformThreshold; // 深灰 = 單向平台
+                    solid[cx, cy] = dark && !platform;
+                    platforms[cx, cy] = platform;
                 }
             }
             Object.DestroyImmediate(mask);
@@ -154,6 +179,46 @@ namespace DrownedDream.EditorTools
                 }
             }
 
+            var tiles = new TileBase[positions.Count];
+            for (int i = 0; i < tiles.Length; i++) tiles[i] = tile;
+            tilemap.SetTiles(positions.ToArray(), tiles);
+            composite.GenerateGeometry();
+        }
+
+        /// <summary>
+        /// 單向平台：另一個 Tilemap，碰撞合併後交給 PlatformEffector2D（只擋從上方落下，可從下方 / 側面穿過）。
+        /// 同在 Ground Layer，玩家著地判定與魚叉都會碰到。
+        /// </summary>
+        private static void BuildPlatforms(Transform root, int groundLayer, Sprite tileSprite, bool[,] platforms)
+        {
+            if (platforms == null) return;
+            var positions = new List<Vector3Int>();
+            for (int cy = 0; cy < platforms.GetLength(1); cy++)
+            {
+                for (int cx = 0; cx < platforms.GetLength(0); cx++)
+                {
+                    if (platforms[cx, cy]) positions.Add(new Vector3Int(cx, cy, 0));
+                }
+            }
+            if (positions.Count == 0) return;
+
+            var go = new GameObject("OneWayPlatforms") { layer = groundLayer };
+            go.transform.SetParent(root, false);
+            var tilemap = go.AddComponent<Tilemap>();
+            go.AddComponent<TilemapRenderer>().enabled = false; // 只做碰撞，外觀由地形貼圖負責
+            var body = go.AddComponent<Rigidbody2D>();
+            body.bodyType = RigidbodyType2D.Static;
+            var tileCollider = go.AddComponent<TilemapCollider2D>();
+            tileCollider.compositeOperation = Collider2D.CompositeOperation.Merge;
+            var composite = go.AddComponent<CompositeCollider2D>();
+            composite.geometryType = CompositeCollider2D.GeometryType.Polygons;
+            composite.usedByEffector = true;
+            var effector = go.AddComponent<PlatformEffector2D>();
+            effector.useOneWay = true;
+            effector.surfaceArc = 160f;
+            effector.useSideFriction = false;
+
+            var tile = EnsureTile(tileSprite);
             var tiles = new TileBase[positions.Count];
             for (int i = 0; i < tiles.Length; i++) tiles[i] = tile;
             tilemap.SetTiles(positions.ToArray(), tiles);
@@ -348,7 +413,32 @@ namespace DrownedDream.EditorTools
             return AssetDatabase.LoadAssetAtPath<Sprite>(path);
         }
 
-        /// <summary>依 4×4 切分建立 Room 邊界。</summary>
+        /// <summary>把矩形範圍內的多個區塊合併成一個 Room（保留左下角那個並放大邊界，其餘刪除）。</summary>
+        public static Room MergeRooms(Room[,] rooms, RectInt area)
+        {
+            var keep = rooms[area.x, area.y];
+            var box = keep.GetComponent<BoxCollider2D>();
+            // 用 offset / size 計算（編輯模式下剛建立的碰撞框 bounds 可能還沒更新；地圖根物件在原點）
+            var last = rooms[area.xMax - 1, area.yMax - 1].GetComponent<BoxCollider2D>();
+            var min = box.offset - box.size / 2f;
+            var max = last.offset + last.size / 2f;
+            box.offset = (min + max) / 2f;
+            box.size = max - min;
+            for (int c = area.x; c < area.xMax; c++)
+            {
+                for (int r = area.y; r < area.yMax; r++)
+                {
+                    if (rooms[c, r] == keep) continue;
+                    Object.DestroyImmediate(rooms[c, r].gameObject);
+                    rooms[c, r] = keep;
+                }
+            }
+            keep.gameObject.name = $"Room_{area.x}_{area.y}_Merged";
+            EditorBuildUtil.Wire(keep, ("_displayName", "Boss 房"));
+            return keep;
+        }
+
+        /// <summary>依 Columns × Rows 切分建立 Room 邊界。</summary>
         private static Room[,] BuildRooms(MapConfig config, Transform root)
         {
             var rooms = new Room[config.Columns, config.Rows];
@@ -375,9 +465,9 @@ namespace DrownedDream.EditorTools
         }
 
         /// <summary>地圖世界尺寸（以遮罩或地圖圖的像素換算）。</summary>
-        private static Vector2 MapSizeUnits(MapConfig config)
+        public static Vector2 MapSizeUnits(MapConfig config)
         {
-            var tex = config.CollisionMask != null ? config.CollisionMask : config.MapTexture;
+            var tex = config.CollisionFromMapAlpha || config.CollisionMask == null ? config.MapTexture : config.CollisionMask;
             if (tex == null) return new Vector2(64f, 64f);
             return new Vector2(tex.width, tex.height) / config.PixelsPerUnit;
         }

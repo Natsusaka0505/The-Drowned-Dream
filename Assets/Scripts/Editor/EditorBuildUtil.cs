@@ -94,6 +94,10 @@ namespace DrownedDream.EditorTools
                     case int i: p.intValue = i; break;
                     case Color c: p.colorValue = c; break;
                     case Vector2 v: p.vector2Value = v; break;
+                    case float[] floats:
+                        p.arraySize = floats.Length;
+                        for (int k = 0; k < floats.Length; k++) p.GetArrayElementAtIndex(k).floatValue = floats[k];
+                        break;
                     case Object[] arr:
                         p.arraySize = arr.Length;
                         for (int k = 0; k < arr.Length; k++) p.GetArrayElementAtIndex(k).objectReferenceValue = arr[k];

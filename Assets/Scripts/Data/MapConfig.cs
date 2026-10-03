@@ -2,7 +2,10 @@ using UnityEngine;
 
 namespace DrownedDream
 {
-    /// <summary>地圖設定（F-MAP）：一張 2048×2048 地圖圖片 + 同尺寸碰撞遮罩，切成 4×4 區塊。</summary>
+    /// <summary>
+    /// 地圖設定（F-MAP）：一張地圖美術圖 + 碰撞（遮罩圖或美術圖透明度），切成 Columns × Rows 區塊；
+    /// 關卡內容可由關卡 Prefab 提供。
+    /// </summary>
     [CreateAssetMenu(menuName = "Drowned Dream/Map Config", fileName = "MapConfig")]
     public class MapConfig : ScriptableObject
     {
@@ -54,5 +57,23 @@ namespace DrownedDream
         [Range(0f, 1f)] [SerializeField] private float _wallThreshold = 0.5f;
         /// <summary>取樣亮度低於此值視為牆（唯讀）</summary>
         public float WallThreshold => _wallThreshold;
+        /// <summary>遮罩取樣亮度低於此值為牆；介於此值與 WallThreshold 之間為單向平台（深灰，可從下方跳穿）</summary>
+        [Range(0f, 1f)] [SerializeField] private float _platformThreshold = 0.2f;
+        /// <summary>單向平台亮度下限（唯讀）</summary>
+        public float PlatformThreshold => _platformThreshold;
+        /// <summary>改用地圖美術圖的透明度產生碰撞（不透明 = 牆；勾選時忽略碰撞遮罩圖）</summary>
+        [SerializeField] private bool _collisionFromMapAlpha;
+        /// <summary>改用地圖美術圖的透明度產生碰撞（唯讀）</summary>
+        public bool CollisionFromMapAlpha => _collisionFromMapAlpha;
+        /// <summary>透明度高於此值視為牆</summary>
+        [Range(0f, 1f)] [SerializeField] private float _alphaThreshold = 0.5f;
+        /// <summary>透明度高於此值視為牆（唯讀）</summary>
+        public float AlphaThreshold => _alphaThreshold;
+
+        [Header("關卡內容")]
+        /// <summary>關卡 Prefab（平台 / 怪物 / 寶箱 / 存檔點 / Boss / 玩家起點；留空 = 用原型程式配置）</summary>
+        [SerializeField] private GameObject _levelPrefab;
+        /// <summary>關卡 Prefab（唯讀）</summary>
+        public GameObject LevelPrefab => _levelPrefab;
     }
 }

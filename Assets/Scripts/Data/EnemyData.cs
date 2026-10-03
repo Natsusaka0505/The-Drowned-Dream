@@ -80,6 +80,102 @@ namespace DrownedDream
         /// <summary>觸手：攻擊後冷卻秒數（唯讀）</summary>
         public float AttackCooldown => _attackCooldown;
 
+        [Header("巡游魚怪：蓄力衝刺")]
+        /// <summary>衝刺觸發距離（玩家在此距離內才衝刺）</summary>
+        [SerializeField] private float _dashRange = 5f;
+        /// <summary>衝刺觸發距離（玩家在此距離內才衝刺）（唯讀）</summary>
+        public float DashRange => _dashRange;
+        /// <summary>衝刺前蓄力秒數（停下閃紅）</summary>
+        [SerializeField] private float _dashWindup = 0.5f;
+        /// <summary>衝刺前蓄力秒數（停下閃紅）（唯讀）</summary>
+        public float DashWindup => _dashWindup;
+        /// <summary>衝刺速度</summary>
+        [SerializeField] private float _dashSpeed = 12f;
+        /// <summary>衝刺速度（唯讀）</summary>
+        public float DashSpeed => _dashSpeed;
+        /// <summary>衝刺持續秒數</summary>
+        [SerializeField] private float _dashTime = 0.35f;
+        /// <summary>衝刺持續秒數（唯讀）</summary>
+        public float DashTime => _dashTime;
+        /// <summary>衝刺後冷卻秒數</summary>
+        [SerializeField] private float _dashCooldown = 2.5f;
+        /// <summary>衝刺後冷卻秒數（唯讀）</summary>
+        public float DashCooldown => _dashCooldown;
+
+        [Header("巡游魚怪：泡泡彈")]
+        /// <summary>追擊中吐泡泡彈的間隔秒數（0 = 不吐）</summary>
+        [SerializeField] private float _bubbleInterval = 3f;
+        /// <summary>追擊中吐泡泡彈的間隔秒數（0 = 不吐）（唯讀）</summary>
+        public float BubbleInterval => _bubbleInterval;
+        /// <summary>泡泡彈速度</summary>
+        [SerializeField] private float _bubbleSpeed = 3f;
+        /// <summary>泡泡彈速度（唯讀）</summary>
+        public float BubbleSpeed => _bubbleSpeed;
+        /// <summary>泡泡彈直徑</summary>
+        [SerializeField] private float _bubbleSize = 0.6f;
+        /// <summary>泡泡彈直徑（唯讀）</summary>
+        public float BubbleSize => _bubbleSize;
+        /// <summary>泡泡彈存活秒數</summary>
+        [SerializeField] private float _bubbleLifetime = 4f;
+        /// <summary>泡泡彈存活秒數（唯讀）</summary>
+        public float BubbleLifetime => _bubbleLifetime;
+
+        [Header("觸手：地面突刺")]
+        /// <summary>地刺間隔秒數（玩家在偵測範圍內、橫戳範圍外時使用；0 = 不用）</summary>
+        [SerializeField] private float _spikeCooldown = 3f;
+        /// <summary>地刺間隔秒數（玩家在偵測範圍內、橫戳範圍外時使用；0 = 不用）（唯讀）</summary>
+        public float SpikeCooldown => _spikeCooldown;
+        /// <summary>地刺預告秒數</summary>
+        [SerializeField] private float _spikeWindup = 0.7f;
+        /// <summary>地刺預告秒數（唯讀）</summary>
+        public float SpikeWindup => _spikeWindup;
+        /// <summary>地刺判定秒數</summary>
+        [SerializeField] private float _spikeActive = 0.3f;
+        /// <summary>地刺判定秒數（唯讀）</summary>
+        public float SpikeActive => _spikeActive;
+        /// <summary>地刺大小（寬, 高）</summary>
+        [SerializeField] private Vector2 _spikeSize = new Vector2(1.2f, 2.2f);
+        /// <summary>地刺大小（寬, 高）（唯讀）</summary>
+        public Vector2 SpikeSize => _spikeSize;
+
+        [Header("深淵之眼：凝視光束")]
+        /// <summary>光束間隔秒數（0 = 不發射）</summary>
+        [SerializeField] private float _beamCooldown = 3.5f;
+        /// <summary>光束間隔秒數（0 = 不發射）（唯讀）</summary>
+        public float BeamCooldown => _beamCooldown;
+        /// <summary>瞄準（預告）秒數</summary>
+        [SerializeField] private float _beamAim = 1f;
+        /// <summary>瞄準（預告）秒數（唯讀）</summary>
+        public float BeamAim => _beamAim;
+        /// <summary>光束判定秒數</summary>
+        [SerializeField] private float _beamActive = 0.35f;
+        /// <summary>光束判定秒數（唯讀）</summary>
+        public float BeamActive => _beamActive;
+        /// <summary>光束最長距離（碰到地形會截斷）</summary>
+        [SerializeField] private float _beamLength = 14f;
+        /// <summary>光束最長距離（碰到地形會截斷）（唯讀）</summary>
+        public float BeamLength => _beamLength;
+        /// <summary>光束寬度</summary>
+        [SerializeField] private float _beamWidth = 0.6f;
+        /// <summary>光束寬度（唯讀）</summary>
+        public float BeamWidth => _beamWidth;
+        /// <summary>光束命中額外扣的 SAN</summary>
+        [SerializeField] private float _beamSanityDamage = 15f;
+        /// <summary>光束命中額外扣的 SAN（唯讀）</summary>
+        public float BeamSanityDamage => _beamSanityDamage;
+        /// <summary>光束特效（FX Lightning II 的 fx_lightning_01；空 = 只顯示色塊）</summary>
+        [SerializeField] private GameObject _beamFx;
+        /// <summary>光束特效（唯讀）</summary>
+        public GameObject BeamFx => _beamFx;
+        /// <summary>光束特效寬度（閃電圖只佔畫格約 1/4 寬，所以比判定寬）</summary>
+        [SerializeField] private float _beamFxWidth = 2.4f;
+        /// <summary>光束特效寬度（唯讀）</summary>
+        public float BeamFxWidth => _beamFxWidth;
+        /// <summary>光束特效存在秒數</summary>
+        [SerializeField] private float _beamFxTime = 0.45f;
+        /// <summary>光束特效存在秒數（唯讀）</summary>
+        public float BeamFxTime => _beamFxTime;
+
         [Header("SAN")]
         /// <summary>恐懼範圍內每秒扣 SAN</summary>
         [SerializeField] private float _sanityDrainPerSecond = 5f;
@@ -100,7 +196,32 @@ namespace DrownedDream
         /// <summary>掉落機率（唯讀）</summary>
         public float DropChance => _dropChance;
 
-        [Header("外觀（原型用色塊）")]
+        [Header("外觀（逐格動畫；沒有畫格時用原型色塊）")]
+        /// <summary>外觀畫格（依序循環播放）</summary>
+        [SerializeField] private Sprite[] _animFrames;
+        /// <summary>外觀畫格（唯讀）</summary>
+        public Sprite[] AnimFrames => _animFrames;
+        /// <summary>每格秒數（長度不足時用 0.1 秒）</summary>
+        [SerializeField] private float[] _animDurations;
+        /// <summary>每格秒數（唯讀）</summary>
+        public float[] AnimDurations => _animDurations;
+        /// <summary>底層靜態圖（例如眼白；有設定時畫格疊在最上層，例如眼皮）</summary>
+        [SerializeField] private Sprite _baseSprite;
+        /// <summary>底層靜態圖（唯讀）</summary>
+        public Sprite BaseSprite => _baseSprite;
+        /// <summary>追視玩家的圖（例如瞳孔，夾在底層與畫格之間）</summary>
+        [SerializeField] private Sprite _lookSprite;
+        /// <summary>追視玩家的圖（唯讀）</summary>
+        public Sprite LookSprite => _lookSprite;
+        /// <summary>追視圖最大偏移（底層圖的局部單位）</summary>
+        [SerializeField] private float _lookRadius = 0.22f;
+        /// <summary>追視圖最大偏移（唯讀）</summary>
+        public float LookRadius => _lookRadius;
+        /// <summary>攻擊用觸鬚圖（觸手橫戳時朝玩家伸出；空 = 拉長身體）</summary>
+        [SerializeField] private Sprite _tendrilSprite;
+        /// <summary>攻擊用觸鬚圖（唯讀）</summary>
+        public Sprite TendrilSprite => _tendrilSprite;
+
         /// <summary>原型色塊顏色</summary>
         [SerializeField] private Color _color = Color.red;
         /// <summary>原型色塊顏色（唯讀）</summary>

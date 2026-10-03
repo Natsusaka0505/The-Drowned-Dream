@@ -18,17 +18,53 @@ MonoBehaviour:
   _moveSpeed: 0
   _chaseSpeed: 4.5
   _patrolDistance: 4
-  _detectRange: 0
+  _detectRange: 9
   _loseRangeMultiplier: 1.5
   _attackRange: 0
   _fearRange: 7
-  _attackDamage: 0
+  _attackDamage: 20
   _attackWindup: 0.6
   _attackActiveTime: 0.4
   _attackCooldown: 1.5
+  _dashRange: 5
+  _dashWindup: 0.5
+  _dashSpeed: 12
+  _dashTime: 0.35
+  _dashCooldown: 2.5
+  _bubbleInterval: 3
+  _bubbleSpeed: 3
+  _bubbleSize: 0.6
+  _bubbleLifetime: 4
+  _spikeCooldown: 3
+  _spikeWindup: 0.7
+  _spikeActive: 0.3
+  _spikeSize: {x: 1.2, y: 2.2}
+  _beamCooldown: 3.5
+  _beamAim: 1
+  _beamActive: 0.35
+  _beamLength: 14
+  _beamWidth: 0.6
+  _beamSanityDamage: 15
+  _beamFx: {fileID: 3122601347285997425, guid: f846812a9a2cb7445b5514cd7bb7e0b3, type: 3}
+  _beamFxWidth: 2.4
+  _beamFxTime: 0.45
   _sanityDrainPerSecond: 8
   _sanityRestoreOnKill: 25
   _dropPrefab: {fileID: 0}
   _dropChance: 1
+  _animFrames:
+  - {fileID: 21300000, guid: a8b3a166bf38948b3961a962cce1f519, type: 3}
+  - {fileID: 21300000, guid: 26fa65905466c420e9b4396809fffbd4, type: 3}
+  - {fileID: 21300000, guid: 45af264ee21954a45beefacc4fb70b2f, type: 3}
+  - {fileID: 21300000, guid: 8de1b1cc6cd4d41a98b5dd3cccb2ae69, type: 3}
+  _animDurations:
+  - 2.2
+  - 0.05
+  - 0.08
+  - 0.05
+  _baseSprite: {fileID: 0}
+  _lookSprite: {fileID: 0}
+  _lookRadius: 0.22
+  _tendrilSprite: {fileID: 0}
   _color: {r: 0.95, g: 0.9, b: 0.4, a: 1}
   _size: {x: 1.2, y: 1.2}

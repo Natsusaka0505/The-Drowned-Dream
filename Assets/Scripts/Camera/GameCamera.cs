@@ -21,7 +21,7 @@ namespace DrownedDream
         /// <summary>跟隨玩家時的畫面大小（orthographicSize）。</summary>
         [SerializeField] private float _followSize = 7f;
         /// <summary>Boss 特寫時的畫面大小。</summary>
-        [SerializeField] private float _closeUpSize = 4.5f;
+        [SerializeField] private float _closeUpSize = 8f; // Boss 放大 2 倍後要拉遠才拍得完整
         /// <summary>平滑跟隨時間。</summary>
         [SerializeField] private float _smoothTime = 0.15f;
         /// <summary>切換目標（玩家 ↔ Boss）時的平移平滑時間（越大越慢）。</summary>
@@ -52,6 +52,21 @@ namespace DrownedDream
         public GameObject Target => _target;
         /// <summary>額外抖動幅度（低 SAN 效果用）。</summary>
         public float ShakeAmount { get; set; }
+
+        /// <summary>短暫震動的幅度（Boss 咆哮等，會隨時間衰減）。</summary>
+        private float _impulseAmount;
+        /// <summary>短暫震動剩餘秒數。</summary>
+        private float _impulseTimer;
+        /// <summary>短暫震動總秒數。</summary>
+        private float _impulseTime;
+
+        /// <summary>觸發一次短暫畫面震動（幅度隨時間衰減到 0）。</summary>
+        public void Shake(float amount, float duration)
+        {
+            _impulseAmount = amount;
+            _impulseTime = Mathf.Max(0.01f, duration);
+            _impulseTimer = _impulseTime;
+        }
 
         /// <summary>註冊單例並快取攝影機。</summary>
         private void Awake()
@@ -110,7 +125,14 @@ namespace DrownedDream
             if (_switching && Vector2.Distance(transform.position, desired) < _switchArriveDistance) _switching = false;
             float smooth = _switching ? _switchSmoothTime : _smoothTime;
             var pos = Vector3.SmoothDamp(transform.position, desired, ref _velocity, smooth, Mathf.Infinity, dt);
-            _shakeOffset = ShakeAmount > 0f ? (Vector3)(Random.insideUnitCircle * ShakeAmount) : Vector3.zero;
+            float impulse = 0f;
+            if (_impulseTimer > 0f)
+            {
+                _impulseTimer -= dt;
+                impulse = _impulseAmount * Mathf.Clamp01(_impulseTimer / _impulseTime);
+            }
+            float shake = ShakeAmount + impulse;
+            _shakeOffset = shake > 0f ? (Vector3)(Random.insideUnitCircle * shake) : Vector3.zero;
             transform.position = pos + _shakeOffset;
         }
 

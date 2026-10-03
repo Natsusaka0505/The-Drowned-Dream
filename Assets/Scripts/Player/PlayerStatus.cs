@@ -18,7 +18,7 @@ namespace DrownedDream
         /// <summary>魚槍參數（魚叉上限）。</summary>
         [SerializeField] private HarpoonConfig _harpoon;
         /// <summary>封印 Boss 需要的封印道具數量。</summary>
-        [SerializeField] private int _requiredSeals = 3;
+        [SerializeField] private int _requiredSeals = 5;
         /// <summary>受傷無敵時閃爍的 Renderer。</summary>
         [SerializeField] private SpriteRenderer[] _flashRenderers;
 
@@ -132,7 +132,8 @@ namespace DrownedDream
         {
             if (!IsAlive || IsInvincible || damage <= 0d) return false;
             _invincibleTimer = _vitals.InvincibleTime;
-            SetHp(_vitals.EnemyHitIsLethal ? 0d : Hp - damage); // 一擊致死（F-ENM-05）
+            // 固定扣最大 HP 的比例（F-ENM-05）；比例為 0 時才用攻擊自己的傷害值
+            SetHp(Hp - (_vitals.EnemyHitHpRatio > 0f ? HpMax * _vitals.EnemyHitHpRatio : damage));
             Damaged?.Invoke();
             return true;
         }
@@ -142,6 +143,9 @@ namespace DrownedDream
 
         /// <summary>回復 SAN（不超過目前最大值）。</summary>
         public void RestoreSanity(double amount) => SetSanity(Sanity + amount);
+
+        /// <summary>直接扣 SAN（敵人凝視光束、Boss 咆哮等攻擊）。</summary>
+        public void LoseSanity(double amount) => SetSanity(Sanity - Math.Max(0d, amount));
 
         /// <summary>設定憋氣狀態與 CD（由 PlayerBreath 呼叫）。</summary>
         public void SetBreath(bool holding, double cooldown)
@@ -210,7 +214,7 @@ namespace DrownedDream
             if (Oxygen <= 0d) SetHp(Hp - _vitals.HpDrainWhenNoOxygen * dt);
         }
 
-        /// <summary>恐懼範圍內掉 SAN，離開後恢復。</summary>
+        /// <summary>恐懼範圍內掉 SAN，離開後恢復；SAN 歸零時持續扣 HP。</summary>
         private void UpdateSanity(double dt)
         {
             double drain = 0d;
@@ -219,13 +223,17 @@ namespace DrownedDream
 
             if (InFear) SetSanity(Sanity - drain * dt);
             else if (Sanity < SanityMax) SetSanity(Sanity + _sanityConfig.RecoverPerSecond * dt);
+
+            // SAN 歸零時每秒扣最大 HP 的固定比例（F-SAN-10）
+            if (Sanity <= 0d) SetHp(Hp - HpMax * _vitals.ZeroSanityHpDrainRatio * dt);
         }
 
         /// <summary>設定 HP，歸零時發出死亡事件。</summary>
         private void SetHp(double value)
         {
             bool wasAlive = IsAlive;
-            Hp = Math.Clamp(value, 0d, HpMax);
+            // 持續扣血（SAN 歸零 / 窒息）會留下小數；不到 0.5 視為 0，避免畫面顯示 0 卻沒死
+            Hp = value < 0.5d ? 0d : Math.Min(value, HpMax);
             HpChanged?.Invoke(Hp, HpMax);
             if (wasAlive && !IsAlive)
             {

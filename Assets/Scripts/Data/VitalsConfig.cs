@@ -24,10 +24,14 @@ namespace DrownedDream
         [SerializeField] private float _invincibleTime = 1f;
         /// <summary>受傷後無敵秒數（唯讀）</summary>
         public float InvincibleTime => _invincibleTime;
-        /// <summary>被怪物（含 Boss 子彈）打中一次 HP 直接歸零（關閉 = 依傷害扣血）</summary>
-        [SerializeField] private bool _enemyHitIsLethal = true;
-        /// <summary>被怪物打中一次 HP 直接歸零（唯讀）</summary>
-        public bool EnemyHitIsLethal => _enemyHitIsLethal;
+        /// <summary>被怪物（含 Boss 攻擊）打中一次扣最大 HP 的比例（0 = 改用各攻擊自己的傷害值）</summary>
+        [Range(0f, 1f)] [SerializeField] private float _enemyHitHpRatio = 0.25f;
+        /// <summary>被怪物打中一次扣最大 HP 的比例（唯讀）</summary>
+        public float EnemyHitHpRatio => _enemyHitHpRatio;
+        /// <summary>SAN 歸零時每秒扣最大 HP 的比例</summary>
+        [Range(0f, 1f)] [SerializeField] private float _zeroSanityHpDrainRatio = 0.05f;
+        /// <summary>SAN 歸零時每秒扣最大 HP 的比例（唯讀）</summary>
+        public float ZeroSanityHpDrainRatio => _zeroSanityHpDrainRatio;
 
         [Header("氧氣")]
         /// <summary>氧氣上限</summary>

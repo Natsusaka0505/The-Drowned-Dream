@@ -4,7 +4,8 @@ namespace DrownedDream
 {
     /// <summary>
     /// 敵人 Action（docs/core）：自動移動 AI（左右移動）、偵測玩家、攻擊判斷。
-    /// 行為依 EnemyData.Behaviour：Patrol 左右巡邏 / 追擊；Stationary 固定蓄力攻擊；Passive 不移動不攻擊。
+    /// 行為依 EnemyData.Behaviour：
+    /// Patrol（魚怪）左右巡邏 / 追擊 + 蓄力衝刺 + 吐泡泡彈；Stationary（觸手）橫戳 + 地面突刺；Passive（深淵之眼）凝視光束。
     /// 玩家憋氣隱形時不偵測、不追擊、不攻擊（F-ENM-03）。
     /// </summary>
     [RequireComponent(typeof(EnemyStatus), typeof(Rigidbody2D))]
@@ -25,6 +26,10 @@ namespace DrownedDream
             Attack,
             /// <summary>攻擊後冷卻。</summary>
             Recover,
+            /// <summary>魚怪衝刺前蓄力。</summary>
+            DashWindup,
+            /// <summary>魚怪衝刺中。</summary>
+            Dash,
         }
 
         /// <summary>外觀 Renderer。</summary>
@@ -33,6 +38,8 @@ namespace DrownedDream
         [SerializeField] private float _minX;
         /// <summary>活動範圍右界（世界 X）。</summary>
         [SerializeField] private float _maxX;
+        /// <summary>地形 Layer（擋彈幕、截斷光束；未設定時用名為 Ground 的 Layer）。</summary>
+        [SerializeField] private LayerMask _groundMask;
         /// <summary>外觀上下浮動幅度（單位；只動外觀，不動碰撞框）。</summary>
         [SerializeField] private float _bobHeight = 0.08f;
         /// <summary>外觀上下浮動速度（弧度 / 秒）。</summary>
@@ -60,6 +67,16 @@ namespace DrownedDream
         private Vector3 _baseVisualPos;
         /// <summary>浮動相位（每隻隨機，避免同步上下）。</summary>
         private float _bobPhase;
+        /// <summary>魚怪衝刺冷卻倒數。</summary>
+        private float _dashCooldownTimer;
+        /// <summary>魚怪衝刺方向（1 右、-1 左）。</summary>
+        private int _dashDir = 1;
+        /// <summary>魚怪泡泡彈倒數。</summary>
+        private float _bubbleTimer;
+        /// <summary>觸手地刺倒數。</summary>
+        private float _spikeTimer;
+        /// <summary>深淵之眼光束倒數。</summary>
+        private float _beamTimer;
 
         /// <summary>敵人資料。</summary>
         private EnemyData Data => _status.Data;
@@ -78,6 +95,7 @@ namespace DrownedDream
                 _baseVisualPos = _renderer.transform.localPosition;
             }
             _bobPhase = Random.Range(0f, Mathf.PI * 2f);
+            if (_groundMask.value == 0) _groundMask = LayerMask.GetMask("Ground");
         }
 
         /// <summary>訂閱受擊事件。</summary>
@@ -99,7 +117,7 @@ namespace DrownedDream
             {
                 case EnemyBehaviour.Patrol: UpdatePatrol(player); break;
                 case EnemyBehaviour.Stationary: UpdateStationary(player); break;
-                default: _status.SetMoving(false); break;
+                default: UpdatePassive(player); break;
             }
         }
 
@@ -141,6 +159,31 @@ namespace DrownedDream
                     }
                     _status.SetMoveSpeed(Data.ChaseSpeed);
                     MoveHorizontally(player.transform.position.x);
+                    UpdateBubbleShot(player);
+                    TryStartDash(player);
+                    break;
+
+                case State.DashWindup:
+                    // 停下閃紅預告衝刺
+                    _status.SetMoving(false);
+                    _stateTimer -= Time.deltaTime;
+                    if (_renderer != null && _hitFlash <= 0f) _renderer.color = Color.Lerp(_baseColor, Color.red, 0.5f + 0.5f * Mathf.Sin(Time.time * 30f));
+                    if (_stateTimer <= 0f)
+                    {
+                        _state = State.Dash;
+                        _stateTimer = Data.DashTime;
+                    }
+                    break;
+
+                case State.Dash:
+                    _stateTimer -= Time.deltaTime;
+                    _status.SetMoveSpeed(Data.DashSpeed);
+                    MoveHorizontally(_body.position.x + _dashDir * 100f); // 朝衝刺方向直衝（活動範圍外會被夾住）
+                    if (_stateTimer <= 0f)
+                    {
+                        _state = State.Chase;
+                        _dashCooldownTimer = Data.DashCooldown;
+                    }
                     break;
 
                 case State.Return:
@@ -156,7 +199,62 @@ namespace DrownedDream
             TryAttack(player, _status.AttackRange);
         }
 
-        /// <summary>觸手：待機 → 蓄力 → 攻擊 → 冷卻（不移動）。</summary>
+        /// <summary>魚怪：玩家在衝刺距離內且冷卻結束 → 進入蓄力。</summary>
+        private void TryStartDash(Player player)
+        {
+            _dashCooldownTimer -= Time.deltaTime;
+            if (_dashCooldownTimer > 0f || Data.DashTime <= 0f || !DetectPlayer(player, Data.DashRange)) return;
+            _dashDir = player.transform.position.x >= _body.position.x ? 1 : -1;
+            _state = State.DashWindup;
+            _stateTimer = Data.DashWindup;
+        }
+
+        /// <summary>魚怪：追擊中定時朝玩家吐一顆慢速泡泡彈（可被魚叉打破）。</summary>
+        private void UpdateBubbleShot(Player player)
+        {
+            if (Data.BubbleInterval <= 0f) return;
+            _bubbleTimer -= Time.deltaTime;
+            if (_bubbleTimer > 0f) return;
+            _bubbleTimer = Data.BubbleInterval;
+            Vector2 dir = ((Vector2)player.transform.position - _body.position).normalized;
+            EnemyProjectile.Spawn(_body.position + dir * 0.6f, dir * Data.BubbleSpeed, Data.BubbleSize, new Color(0.7f, 0.95f, 1f, 0.85f),
+                Data.AttackDamage, 0f, Data.BubbleLifetime, _groundMask, breakable: true);
+        }
+
+        /// <summary>觸手：玩家在偵測範圍內、橫戳範圍外時，定時在玩家腳下預告後冒出地刺。</summary>
+        private void UpdateGroundSpike(Player player)
+        {
+            if (Data.SpikeCooldown <= 0f) return;
+            _spikeTimer -= Time.deltaTime;
+            if (_spikeTimer > 0f || !_status.PlayerDetected || DetectPlayer(player, _status.AttackRange)) return;
+            _spikeTimer = Data.SpikeCooldown;
+            float floorY = _body.position.y - Data.Size.y / 2f; // 觸手腳底 = 地面
+            var center = new Vector2(player.transform.position.x, floorY + Data.SpikeSize.y / 2f);
+            TelegraphStrike.Spawn(center, Data.SpikeSize, 0f, new Color(0.85f, 0.35f, 0.4f), Data.SpikeWindup, Data.SpikeActive, Data.AttackDamage, 0f)
+                .WithSpikes(3, new Color(0.75f, 0.7f, 0.65f)); // 骨白色尖刺，預測線為暗紅
+
+        }
+
+        /// <summary>深淵之眼：看到玩家後瞄準一段時間（預告線），再射出直線光束（碰地形截斷），命中額外扣 SAN。</summary>
+        private void UpdatePassive(Player player)
+        {
+            _status.SetMoving(false);
+            if (Data.BeamCooldown <= 0f) return;
+            _beamTimer -= Time.deltaTime;
+            if (_beamTimer > 0f || !_status.PlayerDetected) return;
+            _beamTimer = Data.BeamCooldown + Data.BeamAim;
+
+            Vector2 origin = _body.position;
+            Vector2 dir = ((Vector2)player.transform.position - origin).normalized;
+            float length = Data.BeamLength;
+            var wall = Physics2D.Raycast(origin, dir, length, _groundMask);
+            if (wall.collider != null) length = wall.distance;
+            float angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
+            TelegraphStrike.Spawn(origin + dir * (length / 2f), new Vector2(length, Data.BeamWidth), angle, new Color(1f, 0.85f, 0.3f),
+                Data.BeamAim, Data.BeamActive, Data.AttackDamage, Data.BeamSanityDamage).WithFx(Data.BeamFx, Data.BeamFxWidth, Data.BeamFxTime);
+        }
+
+        /// <summary>觸手：待機 → 蓄力 → 攻擊 → 冷卻（不移動）；待機時也會用地刺攻擊較遠的玩家。</summary>
         private void UpdateStationary(Player player)
         {
             _status.SetMoving(false);
@@ -168,6 +266,10 @@ namespace DrownedDream
                     {
                         _state = State.Windup;
                         _stateTimer = Data.AttackWindup;
+                    }
+                    else
+                    {
+                        UpdateGroundSpike(player);
                     }
                     break;
 
@@ -202,6 +304,13 @@ namespace DrownedDream
             Vector2 pos = _body.position;
             float step = (float)_status.MoveSpeed * Time.deltaTime;
             float newX = Mathf.MoveTowards(pos.x, targetX, step);
+            // 前方有牆 / 平台側面就停下（手擺關卡沒有設活動範圍時避免穿牆），視為抵達讓巡邏折返
+            float dx = newX - pos.x;
+            if (Mathf.Abs(dx) > 0f && Physics2D.Raycast(pos, new Vector2(Mathf.Sign(dx), 0f), Mathf.Abs(dx) + Data.Size.x / 2f, _groundMask).collider != null)
+            {
+                _status.SetMoving(false);
+                return true;
+            }
             bool arrived = Mathf.Abs(newX - targetX) < 0.05f;
             _status.SetMoving(!arrived);
             _body.MovePosition(new Vector2(newX, pos.y));
@@ -235,27 +344,80 @@ namespace DrownedDream
             }
         }
 
-        /// <summary>觸手原型視覺：蓄力變亮、攻擊時伸長。</summary>
+        /// <summary>
+        /// 觸手（海蝶）攻擊視覺：蓄力變亮；攻擊時朝玩家方向噴出觸鬚（有觸鬚圖時），沒有觸鬚圖則沿用拉長身體。
+        /// </summary>
         private void UpdateAttackVisual()
         {
             if (_renderer == null || _hitFlash > 0f) return;
             var t = _renderer.transform;
+            bool hasTendril = Data.TendrilSprite != null;
             switch (_state)
             {
                 case State.Windup:
                     _renderer.color = Color.Lerp(_baseColor, Color.yellow, 0.6f);
                     t.localScale = _baseScale;
+                    SetTendril(0f);
                     break;
                 case State.Attack:
                     _renderer.color = Color.Lerp(_baseColor, Color.white, 0.3f);
-                    float reach = Data.AttackRange * 2f / Mathf.Max(0.01f, Data.Size.x);
-                    t.localScale = new Vector3(_baseScale.x * reach, _baseScale.y, 1f);
+                    if (hasTendril)
+                    {
+                        // 攻擊剛開始的 30% 時間內快速伸出到攻擊範圍
+                        float elapsed = Data.AttackActiveTime - _stateTimer;
+                        SetTendril(Mathf.Clamp01(elapsed / Mathf.Max(0.01f, Data.AttackActiveTime * 0.3f)));
+                    }
+                    else
+                    {
+                        float reach = Data.AttackRange * 2f / Mathf.Max(0.01f, Data.Size.x);
+                        t.localScale = new Vector3(_baseScale.x * reach, _baseScale.y, 1f);
+                    }
+                    break;
+                case State.Recover:
+                    _renderer.color = _baseColor;
+                    t.localScale = _baseScale;
+                    // 冷卻開始時 0.15 秒縮回
+                    SetTendril(Mathf.Clamp01(1f - (Data.AttackCooldown - _stateTimer) / 0.15f));
                     break;
                 default:
                     _renderer.color = _baseColor;
                     t.localScale = _baseScale;
+                    SetTendril(0f);
                     break;
             }
+        }
+
+        /// <summary>觸鬚（執行期建立）。</summary>
+        private SpriteRenderer _tendril;
+        /// <summary>觸鬚伸出方向（1 右、-1 左），每次開始伸出時朝向玩家。</summary>
+        private int _tendrilDir = 1;
+
+        /// <summary>設定觸鬚伸出比例（0 = 收起）；從 0 開始伸出時朝向玩家。</summary>
+        private void SetTendril(float ratio)
+        {
+            if (Data.TendrilSprite == null) return;
+            if (_tendril == null)
+            {
+                var go = new GameObject("Tendril");
+                go.transform.SetParent(transform, false);
+                _tendril = go.AddComponent<SpriteRenderer>();
+                _tendril.sprite = Data.TendrilSprite;
+                _tendril.sharedMaterial = _renderer.sharedMaterial;
+                _tendril.sortingOrder = _renderer.sortingOrder - 1;
+            }
+
+            if (ratio <= 0f)
+            {
+                _tendril.enabled = false;
+                var player = Player.Instance;
+                if (player != null) _tendrilDir = player.transform.position.x >= _body.position.x ? 1 : -1;
+                return;
+            }
+            _tendril.enabled = true;
+            float spriteLength = Mathf.Max(0.01f, Data.TendrilSprite.bounds.size.x);
+            float length = Data.AttackRange * ratio;
+            _tendril.transform.localPosition = new Vector3(0f, Data.Size.y * 0.1f, 0f);
+            _tendril.transform.localScale = new Vector3(_tendrilDir * length / spriteLength, 0.6f, 1f);
         }
 
         /// <summary>選取時畫出偵測 / 攻擊 / 巡邏範圍。</summary>

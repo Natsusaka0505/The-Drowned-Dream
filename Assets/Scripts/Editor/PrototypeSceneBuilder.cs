@@ -17,7 +17,7 @@ namespace DrownedDream.EditorTools
     /// 建立 Layer、佔位圖、ScriptableObject 資料、魚叉 Prefab、地圖（4×4 區塊）與關卡內容。
     /// 已存在的資料資產不會覆蓋（保留企劃調整過的數值）；場景與魚叉 Prefab 每次重建。
     /// </summary>
-    public static class PrototypeSceneBuilder
+    public static partial class PrototypeSceneBuilder
     {
         /// <summary>輸出場景路徑。</summary>
         private const string ScenePath = "Assets/Scenes/Prototype.unity";
@@ -53,6 +53,30 @@ namespace DrownedDream.EditorTools
         public const string ChestArtDir = "Assets/Art/Chests";
         /// <summary>寶箱圖 PPU（195px 寬 ≈ 1.3 單位）。</summary>
         private const int ChestPixelsPerUnit = 150;
+        /// <summary>落雷特效 Prefab（FX Lightning II free）。</summary>
+        public const string LightningFxPath = "Assets/FX_Kandol_Pack/FX_lightning_II/Prefabs/fx_lightning_02.prefab";
+        /// <summary>深淵之眼光束特效 Prefab（FX Lightning II free）。</summary>
+        public const string BeamFxPath = "Assets/FX_Kandol_Pack/FX_lightning_II/Prefabs/fx_lightning_01.prefab";
+        /// <summary>Boss 畫格資料夾（由 boss.gif 拆出，boss_00~32.png）。</summary>
+        public const string BossArtDir = "Assets/Art/Boss";
+        /// <summary>Boss 畫格 PPU（459px 高 ≈ 6 單位）。</summary>
+        private const int BossPixelsPerUnit = 76;
+        /// <summary>Boss 每格秒數（照 boss.gif 原本的每格時間）。</summary>
+        private static readonly float[] BossFrameDurations =
+        {
+            0.1f, 0.06f, 0.1f, 0.06f, 0.1f, 0.06f, 0.1f, 0.06f, 0.1f, 0.06f, 0.1f, 0.06f, 0.1f, 0.06f, 0.1f, 0.06f,
+            0.1f, 0.06f, 0.1f, 0.06f, 0.1f, 0.06f, 0.1f, 0.06f, 0.1f, 0.06f, 0.1f, 0.06f, 0.1f, 0.06f, 0.1f, 0.06f, 0.03f,
+        };
+        /// <summary>怪物畫格資料夾（眼球 / 海蝶 / 觸鬚）。</summary>
+        public const string EnemyArtDir = "Assets/Art/Enemies";
+        /// <summary>角色畫格資料夾。</summary>
+        public const string PlayerArtDir = "Assets/Art/Player";
+        /// <summary>角色畫格 PPU（站姿約 455px 高 ≈ 1.6 單位）。</summary>
+        private const int PlayerPixelsPerUnit = 285;
+        /// <summary>面向右的 pivot（裁切框內：身體中心 x、腳底 y）。</summary>
+        private static readonly Vector2 PlayerPivotRight = new Vector2(0.277f, 0.015f);
+        /// <summary>面向左的 pivot。</summary>
+        private static readonly Vector2 PlayerPivotLeft = new Vector2(0.660f, 0.015f);
         /// <summary>音效設定資產路徑。</summary>
         private const string AudioConfigPath = "Assets/Data/Config/AudioConfig.asset";
         /// <summary>音效設定欄位 ↔ 音檔路徑 ↔ 是否循環（見 SD-02 音效）。</summary>
@@ -99,6 +123,13 @@ namespace DrownedDream.EditorTools
                 EditorUtility.DisplayDialog("重建原型場景", "請先停止 Play 模式再執行。", "OK");
                 return;
             }
+            // 先匯入新檔；若因此觸發腳本重新編譯，這次建置會用到舊程式 → 擋下來請使用者稍後再按
+            AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
+            if (EditorApplication.isCompiling)
+            {
+                EditorUtility.DisplayDialog("重建原型場景", "腳本正在編譯中，建出來會是舊版本。\n請等右下角轉圈結束後再執行一次。", "OK");
+                return;
+            }
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
             if (File.Exists(ScenePath) &&
                 !EditorUtility.DisplayDialog("重建原型場景", $"{ScenePath} 已存在，要覆蓋嗎？\n（資料資產不會被覆蓋）", "覆蓋", "取消"))
@@ -113,13 +144,7 @@ namespace DrownedDream.EditorTools
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
 
             EnsureFolder("Assets/Scenes");
-            EnsureFolder(PrefabDir);
-            s_groundLayer = EnsureLayer("Ground", 6);
-            s_playerLayer = EnsureLayer("Player", 7);
-            s_enemyLayer = EnsureLayer("Enemy", 8);
-            s_harpoonLayer = EnsureLayer("Harpoon", 9);
-            s_square = EnsureShapeSprite(ArtDir, "Square", circle: false);
-            s_circle = EnsureShapeSprite(ArtDir, "Circle", circle: true);
+            InitShared();
             PrototypeMapLayout.EnsurePlaceholders();
 
             var data = CreateData();
@@ -130,6 +155,18 @@ namespace DrownedDream.EditorTools
             AddSceneToBuild();
             AssetDatabase.SaveAssets();
             Debug.Log("[DrownedDream] 原型場景建立完成：" + ScenePath);
+        }
+
+        /// <summary>建立 Layer 與佔位圖（建場景與建關卡範本共用）。</summary>
+        private static void InitShared()
+        {
+            EnsureFolder(PrefabDir);
+            s_groundLayer = EnsureLayer("Ground", 6);
+            s_playerLayer = EnsureLayer("Player", 7);
+            s_enemyLayer = EnsureLayer("Enemy", 8);
+            s_harpoonLayer = EnsureLayer("Harpoon", 9);
+            s_square = EnsureShapeSprite(ArtDir, "Square", circle: false);
+            s_circle = EnsureShapeSprite(ArtDir, "Circle", circle: true);
         }
 
         // ───────────────────────── 資料 ─────────────────────────
@@ -193,11 +230,11 @@ namespace DrownedDream.EditorTools
                 ("_rows", PrototypeMapLayout.Grid),
                 ("_pixelsPerUnit", PrototypeMapLayout.PixelsPerUnit),
                 ("_maskCellPixels", PrototypeMapLayout.CellPixels)));
-            if (d.Map.MapTexture == null || d.Map.CollisionMask == null)
+            if (d.Map.MapTexture == null || (d.Map.CollisionMask == null && !d.Map.CollisionFromMapAlpha))
             {
                 // 圖片參照遺失（例如佔位圖重新產生）時補回佔位圖
                 if (d.Map.MapTexture == null) Wire(d.Map, ("_mapTexture", AssetDatabase.LoadAssetAtPath<Texture2D>(PrototypeMapLayout.MapPath)));
-                if (d.Map.CollisionMask == null) Wire(d.Map, ("_collisionMask", AssetDatabase.LoadAssetAtPath<Texture2D>(PrototypeMapLayout.MaskPath)));
+                if (d.Map.CollisionMask == null && !d.Map.CollisionFromMapAlpha) Wire(d.Map, ("_collisionMask", AssetDatabase.LoadAssetAtPath<Texture2D>(PrototypeMapLayout.MaskPath)));
                 EditorUtility.SetDirty(d.Map);
             }
             MapBuilder.EnsureTerrainSet(d.Map); // 舊的 MapConfig 沒有地形素材時補上預設切片
@@ -249,7 +286,7 @@ namespace DrownedDream.EditorTools
                 ("_behaviour", EnemyBehaviour.Stationary),
                 ("_maxHits", 3),
                 ("_moveSpeed", 0f),
-                ("_detectRange", 2.5f),
+                ("_detectRange", 7f), // 地刺：玩家在此範圍、橫戳範圍外時使用
                 ("_attackRange", 2.5f),
                 ("_fearRange", 4f),
                 ("_sanityDrainPerSecond", 4f),
@@ -268,14 +305,33 @@ namespace DrownedDream.EditorTools
                 ("_behaviour", EnemyBehaviour.Passive),
                 ("_maxHits", 3),
                 ("_moveSpeed", 0f),
-                ("_detectRange", 0f),
+                ("_detectRange", 9f), // 凝視光束偵測距離
                 ("_attackRange", 0f),
                 ("_fearRange", 7f),
                 ("_sanityDrainPerSecond", 8f),
-                ("_attackDamage", 0f),
+                ("_attackDamage", 20f),
                 ("_sanityRestoreOnKill", 25f),
                 ("_color", new Color(0.95f, 0.9f, 0.4f)),
                 ("_size", new Vector2(1.2f, 1.2f))));
+            AssignEnemyArt(d.Eye, "eye_lid", 4, new[] { 2.2f, 0.05f, 0.08f, 0.05f }, null);      // 眼皮：張眼久一點，偶爾眨眼
+            if (d.Eye.BaseSprite == null)
+            {
+                // 眼球分層：眼白 + 追視玩家的瞳孔（眼皮畫格疊在最上層）
+                Wire(d.Eye,
+                    ("_baseSprite", AssetDatabase.LoadAssetAtPath<Sprite>(ImportSprite($"{EnemyArtDir}/eye_base.png", 100, SpriteAlignment.Center))),
+                    ("_lookSprite", AssetDatabase.LoadAssetAtPath<Sprite>(ImportSprite($"{EnemyArtDir}/eye_iris.png", 100, SpriteAlignment.Center))));
+                EditorUtility.SetDirty(d.Eye);
+            }
+            AssignEnemyArt(d.Tentacle, "seabutterfly", 4, new[] { 0.12f, 0.12f, 0.12f, 0.12f }, // 拍翅
+                AssetDatabase.LoadAssetAtPath<Sprite>(ImportSprite($"{EnemyArtDir}/tendril.png", 32, SpriteAlignment.LeftCenter)));
+            if (d.Eye.BeamFx == null)
+            {
+                // 已存在的資產不會重設數值，特效欄位空著時補上
+                var beamFx = AssetDatabase.LoadAssetAtPath<GameObject>(BeamFxPath);
+                if (beamFx == null) Debug.LogWarning("[DrownedDream] 找不到光束特效：" + BeamFxPath);
+                Wire(d.Eye, ("_beamFx", beamFx));
+                EditorUtility.SetDirty(d.Eye);
+            }
 
             string matPath = $"{DataDir}/Config/PlayerNoFriction.physicsMaterial2D";
             d.NoFriction = AssetDatabase.LoadAssetAtPath<PhysicsMaterial2D>(matPath);
@@ -359,10 +415,8 @@ namespace DrownedDream.EditorTools
             globalLight.intensity = 0.85f;
             globalLight.color = new Color(0.55f, 0.75f, 1f);
 
-            MapBuilder.Build(d.Map, s_groundLayer, s_square);
-            BuildContent(d);
-
-            var spawn = PrototypeMapLayout.Local(0, 3, 3f, 1.3f);
+            var rooms = MapBuilder.Build(d.Map, s_groundLayer, s_square);
+            var spawn = d.Map.LevelPrefab != null ? PlaceLevel(d.Map) : BuildPrototypeContent(d, rooms);
             var player = BuildPlayer(d, harpoonPrefab, spawn);
 
             var camGo = new GameObject("Main Camera") { tag = "MainCamera" };
@@ -474,52 +528,93 @@ namespace DrownedDream.EditorTools
             // 一般區塊右側空地（貼地方塊 8 ~ 牆 15.5，扣掉魚怪半寬 0.7）：魚怪只在這段巡邏 / 追擊
             Vector2 FishZone(int col) => new Vector2(col * PrototypeMapLayout.RoomUnits + 8.7f, col * PrototypeMapLayout.RoomUnits + 14.8f);
 
-            // 第 3 排（起點）
-            MakeCheckpoint(root, PrototypeMapLayout.Local(0, 3, 2f, floorItemY)); // 避開貼地方塊（4~8）
-            MakeChest(root, d.ChestBlueGray, PrototypeMapLayout.Local(0, 3, 11f, highPlatY));
+            PlacePlatforms(root);
+
+            // 上排（起點 (0,3) → 往右）。(0,3)、(3,3) 地板有洞（6.5~9.5 單位），不放平台
+            MakeCheckpoint(root, PrototypeMapLayout.Local(0, 3, 2f, floorItemY));
+            MakeChest(root, d.ChestBlueGray, PrototypeMapLayout.Local(0, 3, 12f, floorItemY));
             MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(1, 3, 10f, floorY), FishZone(1));
             MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(1, 3, 13.5f, floorY), FishZone(1));
+            MakeChest(root, d.ChestBlack, PrototypeMapLayout.Local(1, 3, 11f, highPlatY));      // 封印道具 1
             MakeEnemy(root, d.Eye, PrototypeMapLayout.Local(2, 3, 12f, floorY));
             MakeEnemy(root, d.Eye, PrototypeMapLayout.Local(2, 3, 2f, floorY));
-            MakeChest(root, d.ChestBlack, PrototypeMapLayout.Local(2, 3, 11f, highPlatY));
+            MakeChest(root, d.ChestGray, PrototypeMapLayout.Local(2, 3, 11f, highPlatY));
             MakeHallucination(root, PrototypeMapLayout.Local(2, 3, 6f, 12f), 1);
-            MakeChest(root, d.ChestGray, PrototypeMapLayout.Local(3, 3, 12f, floorItemY));
+            MakeCheckpoint(root, PrototypeMapLayout.Local(3, 3, 3f, floorItemY));
+            MakeChest(root, d.ChestBlack, PrototypeMapLayout.Local(3, 3, 12.5f, floorItemY));    // 封印道具 2
 
-            // 第 2 排（右 → 左）
-            MakeEnemy(root, d.Tentacle, PrototypeMapLayout.Local(3, 2, 12f, floorY)); // 避開右側階梯方塊
-            MakeEnemy(root, d.Tentacle, PrototypeMapLayout.Local(3, 2, 3f, floorY));  // 守住往左的門
-            MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(2, 2, 10f, floorY), FishZone(2));
-            MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(2, 2, 13.5f, floorY), FishZone(2));
-            MakeChest(root, d.ChestBlueGray, PrototypeMapLayout.Local(2, 2, 11f, highPlatY));
-            MakeChest(root, d.ChestGray, PrototypeMapLayout.Local(1, 2, 6f, lowPlatY));
-            MakeEnemy(root, d.Eye, PrototypeMapLayout.Local(1, 2, 3f, floorY));
-            MakeEnemy(root, d.Eye, PrototypeMapLayout.Local(1, 2, 14f, floorY));
-            MakeHallucination(root, PrototypeMapLayout.Local(1, 2, 9f, 12f), 2);
-            MakeCheckpoint(root, PrototypeMapLayout.Local(0, 2, 12f, floorItemY));
+            // 支線小房間 (0,2)：從起點地板洞掉下來，左側有階梯回去
+            MakeChest(root, d.ChestBlack, PrototypeMapLayout.Local(0, 2, 12f, floorItemY));      // 封印道具 3
+            MakeEnemy(root, d.Eye, PrototypeMapLayout.Local(0, 2, 10f, floorY));
 
-            // 第 1 排（左 → 右），(0,1) 有憋氣屏障擋住往右的路
-            MakeBreathGate(root, PrototypeMapLayout.Local(0, 1, 14f, 0.5f), new Vector2(0.5f, 15f), d.Audio.Water);
-            MakeChest(root, d.ChestBlack, PrototypeMapLayout.Local(1, 1, 9f, floorItemY)); // 避開貼地方塊（4~8）
-            MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(1, 1, 10f, floorY), FishZone(1));
-            MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(1, 1, 13.5f, floorY), FishZone(1));
-            MakeEnemy(root, d.Eye, PrototypeMapLayout.Local(2, 1, 10f, floorY)); // 避開貼地方塊（4~8）
-            MakeEnemy(root, d.Eye, PrototypeMapLayout.Local(2, 1, 14f, floorY));
-            MakeChest(root, d.ChestGray, PrototypeMapLayout.Local(2, 1, 11f, highPlatY));
-            MakeCheckpoint(root, PrototypeMapLayout.Local(3, 1, 4.5f, floorItemY));
+            // 右側直井 (3,2)+(3,1)：從 (3,3) 掉下來會一路穿到 (3,0)；直井底部左側有觸手
+            MakeEnemy(root, d.Tentacle, PrototypeMapLayout.Local(3, 1, 3f, floorY));
 
-            // 第 0 排（右 → 左），終點 Boss
-            MakeChest(root, d.ChestBlack, PrototypeMapLayout.Local(3, 0, 1.5f, floorItemY));
+            // 下排（(3,0) → 往左）
+            MakeChest(root, d.ChestBlack, PrototypeMapLayout.Local(3, 0, 1.5f, floorItemY));     // 封印道具 4
             MakeEnemy(root, d.Tentacle, PrototypeMapLayout.Local(3, 0, 3.5f, floorY));
-            MakeEnemy(root, d.Tentacle, PrototypeMapLayout.Local(3, 0, 12f, floorY)); // 階梯方塊（13~15.5）左邊
+            MakeEnemy(root, d.Tentacle, PrototypeMapLayout.Local(3, 0, 12f, floorY));            // 階梯方塊（13~15.5）左邊
             MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(2, 0, 10f, floorY), FishZone(2));
             MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(2, 0, 13.5f, floorY), FishZone(2));
             MakeChest(root, d.ChestBlueGray, PrototypeMapLayout.Local(2, 0, 11f, highPlatY));
             MakeCheckpoint(root, PrototypeMapLayout.Local(1, 0, 12f, floorItemY));
             MakeChest(root, d.ChestGray, PrototypeMapLayout.Local(1, 0, 6f, lowPlatY));
+            MakeHallucination(root, PrototypeMapLayout.Local(1, 0, 9f, 12f), 2);
+            // 憋氣屏障擋住往 (0,0) 的門
+            MakeBreathGate(root, PrototypeMapLayout.Local(1, 0, 1.5f, 0.5f), new Vector2(0.5f, 15f), d.Audio.Water);
+            MakeEnemy(root, d.Eye, PrototypeMapLayout.Local(0, 0, 12f, floorY));
 
-            var boss = MakeBoss(root, PrototypeMapLayout.Local(0, 0, 4f, floorY)); // Boss 也站在地面（F-ENM-00）
-            MakeAltar(root, boss, PrototypeMapLayout.Local(0, 0, 10f, 1f));
-            MakeBossArea(root, boss, PrototypeMapLayout.Local(0, 0, 8f, 8f));
+            // (0,1)：從 (0,0) 爬上來，右側就是 Boss 房入口
+            MakeCheckpoint(root, PrototypeMapLayout.Local(0, 1, 12f, floorItemY));
+            MakeChest(root, d.ChestGray, PrototypeMapLayout.Local(0, 1, 3f, floorItemY));
+
+            // 中央 Boss 房（2×2 打通）：Boss 站在正中央地面，祭壇在入口側
+            float arenaFloor = PrototypeMapLayout.ArenaFloorY;
+            float arenaX = PrototypeMapLayout.ArenaCenterX;
+            var boss = MakeBoss(root, new Vector2(arenaX, arenaFloor));
+            MakeAltar(root, boss, new Vector2(PrototypeMapLayout.BossArena.x * PrototypeMapLayout.RoomUnits + 3f, arenaFloor + 0.5f));
+            // 第 5 個封印道具：第一次進 Boss 房後，從這些候選點（一般區塊地板）隨機出現
+            MakeHiddenSealSpawner(root, d.ChestBlack, new[]
+            {
+                PrototypeMapLayout.Local(1, 3, 2f, floorItemY),
+                PrototypeMapLayout.Local(2, 3, 9f, floorItemY),
+                PrototypeMapLayout.Local(2, 0, 2f, floorItemY),
+                PrototypeMapLayout.Local(1, 0, 10f, floorItemY),
+            });
+            MakeBossArea(root, boss, new Vector2(arenaX, arenaFloor + 8f));
+        }
+
+        /// <summary>
+        /// 在地圖算好的位置放浮台：輪流使用隊友的 float1~6 Prefab，放在掛 PlatformGroup 的 Platforms 底下
+        /// （執行時設成 Ground Layer + 單向平台）。找不到 Prefab 時用灰色方塊代替。
+        /// </summary>
+        private static void PlacePlatforms(Transform parent)
+        {
+            var group = new GameObject("Platforms", typeof(PlatformGroup)).transform;
+            group.SetParent(parent, false);
+            var prefabs = new System.Collections.Generic.List<GameObject>();
+            for (int i = 1; i <= 6; i++)
+            {
+                var p = AssetDatabase.LoadAssetAtPath<GameObject>($"{PlatformPrefabDir}/float{i}.prefab");
+                if (p != null) prefabs.Add(p);
+            }
+            if (prefabs.Count == 0) Debug.LogWarning("[DrownedDream] 找不到 float 平台 Prefab，改用佔位方塊：" + PlatformPrefabDir);
+
+            var spots = PrototypeMapLayout.PlatformSpots;
+            for (int i = 0; i < spots.Count; i++)
+            {
+                if (prefabs.Count > 0)
+                {
+                    Place(prefabs[i % prefabs.Count], group, spots[i]);
+                    continue;
+                }
+                var go = new GameObject($"Platform{i}");
+                go.transform.SetParent(group, false);
+                go.transform.position = spots[i] + Vector2.up * 0.25f;
+                go.transform.localScale = new Vector3(PrototypeMapLayout.PlatformWidth, 0.5f, 1f);
+                MakeSprite(go, s_square, new Color(0.35f, 0.38f, 0.42f), 4);
+                go.AddComponent<BoxCollider2D>();
+            }
         }
 
         /// <summary>建立玩家與所有玩家元件。</summary>
@@ -535,11 +630,25 @@ namespace DrownedDream.EditorTools
             col.edgeRadius = 0.05f;
             col.sharedMaterial = d.NoFriction;
 
-            var visual = Child(go.transform, "Visual", Vector2.zero);
-            var bodySr = MakeSprite(Child(visual, "Body", Vector2.zero).gameObject, s_square, new Color(0.85f, 0.75f, 0.55f), 15);
-            bodySr.transform.localScale = new Vector3(0.75f, 1.5f, 1f);
-            var maskSr = MakeSprite(Child(visual, "DivingMask", new Vector2(0.18f, 0.4f)).gameObject, s_square, new Color(0.4f, 0.85f, 1f), 16);
-            maskSr.transform.localScale = new Vector3(0.4f, 0.3f, 1f);
+            // 有美術畫格：一個 SpriteRenderer（腳底對齊碰撞框底部），左右各一組圖不翻轉；沒有就用佔位方塊
+            var art = LoadPlayerArt();
+            Transform visual = null;
+            Object[] renderers;
+            SpriteRenderer artSr = null;
+            if (art != null)
+            {
+                artSr = MakeSprite(Child(go.transform, "Sprite", new Vector2(0f, -0.7f)).gameObject, (Sprite)art[0][0], Color.white, 15);
+                renderers = new Object[] { artSr };
+            }
+            else
+            {
+                visual = Child(go.transform, "Visual", Vector2.zero);
+                var bodySr = MakeSprite(Child(visual, "Body", Vector2.zero).gameObject, s_square, new Color(0.85f, 0.75f, 0.55f), 15);
+                bodySr.transform.localScale = new Vector3(0.75f, 1.5f, 1f);
+                var maskSr = MakeSprite(Child(visual, "DivingMask", new Vector2(0.18f, 0.4f)).gameObject, s_square, new Color(0.4f, 0.85f, 1f), 16);
+                maskSr.transform.localScale = new Vector3(0.4f, 0.3f, 1f);
+                renderers = new Object[] { bodySr, maskSr };
+            }
 
             var lantern = Child(go.transform, "Lantern", new Vector2(0f, 0.3f)).gameObject.AddComponent<Light2D>();
             lantern.lightType = Light2D.LightType.Point;
@@ -549,21 +658,73 @@ namespace DrownedDream.EditorTools
             lantern.color = new Color(1f, 0.9f, 0.7f);
 
             go.AddComponent<Player>(); // RequireComponent 會自動補齊其他玩家元件
-            var renderers = new Object[] { bodySr, maskSr };
+            if (art != null)
+            {
+                Wire(go.AddComponent<PlayerAnimator>(), ("_renderer", artSr),
+                    ("_walkRight", art[0]), ("_walkLeft", art[1]), ("_jumpRight", art[2]), ("_jumpLeft", art[3]));
+            }
 
             Wire(go.GetComponent<PlayerStatus>(),
                 ("_vitals", d.Vitals), ("_sanityConfig", d.Sanity), ("_movement", d.Movement), ("_harpoon", d.Harpoon),
-                ("_requiredSeals", 3), ("_flashRenderers", renderers));
-            Wire(go.GetComponent<PlayerMove>(), ("_groundMask", Mask(s_groundLayer)), ("_visual", visual));
+                ("_requiredSeals", 5), ("_flashRenderers", renderers));
+            Wire(go.GetComponent<PlayerMove>(), ("_groundMask", Mask(s_groundLayer)), ("_visual", visual)); // 有美術畫格時 visual = null（不翻轉）
             Wire(go.GetComponent<PlayerBreath>(), ("_config", d.Breath), ("_fadeRenderers", renderers));
             Wire(go.GetComponent<PlayerAttack>(), ("_harpoonPrefab", harpoonPrefab));
             return go;
         }
 
+        /// <summary>
+        /// 載入角色畫格（Assets/Art/Player/{walk,jump}_{r,l}_N.png）：回傳 [右走, 左走, 右跳, 左跳]，缺圖回傳 null。
+        /// 圖由美術 2192×2156 原圖裁成同一框、縮成 1/4；pivot 在腳底、身體中心（右向身體偏左、左向偏右，魚槍朝前伸出）。
+        /// </summary>
+        private static Object[][] LoadPlayerArt()
+        {
+            var sets = new[] { ("walk_r", 6, PlayerPivotRight), ("walk_l", 6, PlayerPivotLeft), ("jump_r", 7, PlayerPivotRight), ("jump_l", 7, PlayerPivotLeft) };
+            var result = new Object[sets.Length][];
+            for (int s = 0; s < sets.Length; s++)
+            {
+                var (name, count, pivot) = sets[s];
+                result[s] = new Object[count];
+                for (int i = 0; i < count; i++)
+                {
+                    string path = $"{PlayerArtDir}/{name}_{i}.png";
+                    ImportPivotSprite(path, PlayerPixelsPerUnit, pivot);
+                    var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+                    if (sprite == null)
+                    {
+                        Debug.LogWarning("[DrownedDream] 找不到角色畫格，改用佔位方塊：" + path);
+                        return null;
+                    }
+                    result[s][i] = sprite;
+                }
+            }
+            return result;
+        }
+
+        /// <summary>匯入為自訂 pivot 的 Sprite（設定不同才重新匯入）。</summary>
+        private static void ImportPivotSprite(string path, int pixelsPerUnit, Vector2 pivot)
+        {
+            if (AssetImporter.GetAtPath(path) is not TextureImporter importer) return;
+            var settings = new TextureImporterSettings();
+            importer.ReadTextureSettings(settings);
+            if (importer.textureType == TextureImporterType.Sprite && settings.spritePixelsPerUnit == pixelsPerUnit &&
+                settings.spriteAlignment == (int)SpriteAlignment.Custom && settings.spritePivot == pivot) return;
+
+            settings.textureType = TextureImporterType.Sprite;
+            settings.spriteMode = (int)SpriteImportMode.Single;
+            settings.spritePixelsPerUnit = pixelsPerUnit;
+            settings.spriteAlignment = (int)SpriteAlignment.Custom;
+            settings.spritePivot = pivot;
+            settings.filterMode = FilterMode.Bilinear;
+            importer.SetTextureSettings(settings);
+            importer.textureCompression = TextureImporterCompression.Compressed;
+            importer.SaveAndReimport();
+        }
+
         // ───────────────────────── 物件工廠 ─────────────────────────
 
         /// <summary>建立存檔點。</summary>
-        private static void MakeCheckpoint(Transform parent, Vector2 pos)
+        private static GameObject MakeCheckpoint(Transform parent, Vector2 pos)
         {
             var go = new GameObject("Checkpoint");
             go.transform.SetParent(parent);
@@ -574,6 +735,7 @@ namespace DrownedDream.EditorTools
             col.size = new Vector2(1.2f, 1.6f);
             var cp = go.AddComponent<Checkpoint>();
             Wire(cp, ("_renderer", sr));
+            return go;
         }
 
         /// <summary>在場景放置寶箱 Prefab（itemPos = 原本道具的位置，道具中心比地面高 0.6，寶箱底部貼地）。</summary>
@@ -581,6 +743,21 @@ namespace DrownedDream.EditorTools
         {
             var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
             go.transform.position = itemPos + Vector2.down * 0.6f;
+        }
+
+        /// <summary>建立最後一個封印道具的隨機出現點（itemPos 同 MakeChest，寶箱底部貼地）。</summary>
+        private static GameObject MakeHiddenSealSpawner(Transform parent, GameObject chestPrefab, Vector2[] itemPositions)
+        {
+            var go = new GameObject("HiddenSealSpawner");
+            go.transform.SetParent(parent);
+            for (int i = 0; i < itemPositions.Length; i++)
+            {
+                var point = new GameObject($"Candidate{i + 1}").transform;
+                point.SetParent(go.transform);
+                point.position = itemPositions[i] + Vector2.down * 0.6f;
+            }
+            Wire(go.AddComponent<HiddenSealSpawner>(), ("_chestPrefab", chestPrefab));
+            return go;
         }
 
         /// <summary>載入或建立寶箱基底 Prefab（TreasureChest + Visual 子物件；各顏色為其 Variant）。</summary>
@@ -693,7 +870,7 @@ namespace DrownedDream.EditorTools
         }
 
         /// <summary>建立一般敵人：feet = 地面位置（碰撞框底部貼地）；territory = 活動範圍世界 X（左, 右），null = 不限制。</summary>
-        private static void MakeEnemy(Transform parent, EnemyData data, Vector2 feet, Vector2? territory = null)
+        private static GameObject MakeEnemy(Transform parent, EnemyData data, Vector2 feet, Vector2? territory = null)
         {
             var go = new GameObject($"Enemy_{data.name}") { layer = s_enemyLayer };
             go.transform.SetParent(parent);
@@ -703,31 +880,127 @@ namespace DrownedDream.EditorTools
             var col = go.AddComponent<BoxCollider2D>();
             col.size = data.Size;
             col.isTrigger = true;
-            var sr = MakeSprite(Child(go.transform, "Visual", Vector2.zero).gameObject,
-                data.Behaviour == EnemyBehaviour.Passive ? s_circle : s_square, data.Color, 10);
-            sr.transform.localScale = new Vector3(data.Size.x, data.Size.y, 1f);
+            SpriteRenderer sr;
+            var frames = data.AnimFrames;
+            if (data.BaseSprite != null)
+            {
+                // 分層：底層（眼白，受擊閃白用這層）→ 追視層（瞳孔）→ 畫格層（眼皮眨眼）
+                sr = MakeSprite(Child(go.transform, "Visual", Vector2.zero).gameObject, data.BaseSprite, Color.white, 10);
+                float scale = data.Size.y / data.BaseSprite.bounds.size.y;
+                sr.transform.localScale = new Vector3(scale, scale, 1f);
+                if (data.LookSprite != null)
+                {
+                    var look = MakeSprite(Child(sr.transform, "Look", Vector2.zero).gameObject, data.LookSprite, Color.white, 11);
+                    look.gameObject.AddComponent<EnemyLook>().Init(data.LookRadius);
+                }
+                if (frames != null && frames.Length > 0 && frames[0] != null)
+                {
+                    var anim = MakeSprite(Child(sr.transform, "Anim", Vector2.zero).gameObject, frames[0], Color.white, 12);
+                    Wire(anim.gameObject.AddComponent<SpriteFrameAnimator>(),
+                        ("_frames", frames.Cast<Object>().ToArray()),
+                        ("_durations", data.AnimDurations ?? new float[0]));
+                }
+            }
+            else if (frames != null && frames.Length > 0 && frames[0] != null)
+            {
+                // 有畫格：原色顯示，依圖片高度縮放到碰撞框高度，逐格播放
+                sr = MakeSprite(Child(go.transform, "Visual", Vector2.zero).gameObject, frames[0], Color.white, 10);
+                float scale = data.Size.y / frames[0].bounds.size.y;
+                sr.transform.localScale = new Vector3(scale, scale, 1f);
+                Wire(sr.gameObject.AddComponent<SpriteFrameAnimator>(),
+                    ("_frames", frames.Cast<Object>().ToArray()),
+                    ("_durations", data.AnimDurations ?? new float[0]));
+            }
+            else
+            {
+                sr = MakeSprite(Child(go.transform, "Visual", Vector2.zero).gameObject,
+                    data.Behaviour == EnemyBehaviour.Passive ? s_circle : s_square, data.Color, 10);
+                sr.transform.localScale = new Vector3(data.Size.x, data.Size.y, 1f);
+            }
             var status = go.AddComponent<EnemyStatus>();
             Wire(status, ("_data", data));
             var ai = go.AddComponent<EnemyAI>();
-            Wire(ai, ("_renderer", sr));
+            Wire(ai, ("_renderer", sr), ("_groundMask", Mask(s_groundLayer)));
             if (territory.HasValue) Wire(ai, ("_minX", territory.Value.x), ("_maxX", territory.Value.y));
+            return go;
         }
 
-        /// <summary>建立 Boss（feet = 地面位置；碰撞框高 6，底部貼地）。</summary>
+        /// <summary>Boss 整體縮放（外觀 + 判定一起放大；2026-10-04 調成 2）。</summary>
+        private const float BossScale = 2f;
+
+        /// <summary>建立 Boss（feet = 地面位置；碰撞框 4×6 × BossScale，底部貼地）。</summary>
         private static BossController MakeBoss(Transform parent, Vector2 feet)
         {
             var go = new GameObject("Boss") { layer = s_enemyLayer };
             go.transform.SetParent(parent);
-            go.transform.position = feet + Vector2.up * 3f;
+            go.transform.localScale = new Vector3(BossScale, BossScale, 1f);
+            go.transform.position = feet + Vector2.up * (3f * BossScale);
             var col = go.AddComponent<BoxCollider2D>();
             col.size = new Vector2(4f, 6f);
             col.isTrigger = true;
-            var sr = MakeSprite(Child(go.transform, "Visual", Vector2.zero).gameObject, s_circle, new Color(0.25f, 0.45f, 0.35f), 8);
-            sr.transform.localScale = new Vector3(4.5f, 6.5f, 1f);
+            var sr = MakeBossVisual(go.transform);
             var boss = go.AddComponent<BossController>();
-            Wire(boss, ("_renderer", sr), ("_projectileSprite", s_circle), ("_projectileBlockMask", Mask(s_groundLayer)));
-            Wire(go.GetComponent<FearSource>(), ("_radius", 14f), ("_drainPerSecond", 4f));
+            var lightningFx = AssetDatabase.LoadAssetAtPath<GameObject>(LightningFxPath);
+            if (lightningFx == null) Debug.LogWarning("[DrownedDream] 找不到落雷特效：" + LightningFxPath);
+            Wire(boss, ("_renderer", sr), ("_projectileBlockMask", Mask(s_groundLayer)), ("_lightningFx", lightningFx));
+            Wire(go.GetComponent<FearSource>(), ("_radius", 18f), ("_drainPerSecond", 4f)); // Boss 變大，恐懼範圍跟著放大
             return boss;
+        }
+
+        /// <summary>
+        /// Boss 外觀：有 GIF 拆出的畫格（Assets/Art/Boss/boss_00~32.png）時逐格播放，否則用佔位橢圓。
+        /// 圖片中心對齊碰撞框中心（碰撞框高 6），PPU 76 → 約 8.3×6 單位。
+        /// </summary>
+        private static SpriteRenderer MakeBossVisual(Transform boss)
+        {
+            var visual = Child(boss, "Visual", Vector2.zero).gameObject;
+            var frames = new Sprite[BossFrameDurations.Length];
+            for (int i = 0; i < frames.Length; i++)
+            {
+                string path = $"{BossArtDir}/boss_{i:00}.png";
+                ConfigureSprite(path, BossPixelsPerUnit, SpriteAlignment.Center, 1024, compressed: true);
+                frames[i] = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            }
+
+            if (frames[0] == null)
+            {
+                Debug.LogWarning("[DrownedDream] 找不到 Boss 畫格，改用佔位圖：" + BossArtDir);
+                var placeholder = MakeSprite(visual, s_circle, new Color(0.25f, 0.45f, 0.35f), 8);
+                placeholder.transform.localScale = new Vector3(4.5f, 6.5f, 1f);
+                return placeholder;
+            }
+
+            var sr = MakeSprite(visual, frames[0], Color.white, 8);
+            Wire(visual.AddComponent<SpriteFrameAnimator>(),
+                ("_frames", frames.Cast<Object>().ToArray()),
+                ("_durations", BossFrameDurations));
+            return sr;
+        }
+
+        /// <summary>怪物畫格欄位空著時，補上 Assets/Art/Enemies/{prefix}_0~N.png（已設定的不動，保留企劃調整）。</summary>
+        private static void AssignEnemyArt(EnemyData data, string prefix, int count, float[] durations, Sprite tendril)
+        {
+            if (data.AnimFrames != null && data.AnimFrames.Length > 0 && data.AnimFrames[0] != null) return;
+            var frames = new Object[count];
+            for (int i = 0; i < count; i++)
+            {
+                frames[i] = AssetDatabase.LoadAssetAtPath<Sprite>(ImportSprite($"{EnemyArtDir}/{prefix}_{i}.png", 100, SpriteAlignment.Center));
+                if (frames[i] == null)
+                {
+                    Debug.LogWarning($"[DrownedDream] 找不到怪物畫格：{EnemyArtDir}/{prefix}_{i}.png");
+                    return;
+                }
+            }
+            Wire(data, ("_animFrames", frames), ("_animDurations", durations));
+            if (tendril != null) Wire(data, ("_tendrilSprite", tendril));
+            EditorUtility.SetDirty(data);
+        }
+
+        /// <summary>設定圖片匯入為 Sprite 並回傳路徑。</summary>
+        private static string ImportSprite(string path, int pixelsPerUnit, SpriteAlignment alignment)
+        {
+            ConfigureSprite(path, pixelsPerUnit, alignment, 512, compressed: true);
+            return path;
         }
 
         /// <summary>建立封印祭壇。</summary>

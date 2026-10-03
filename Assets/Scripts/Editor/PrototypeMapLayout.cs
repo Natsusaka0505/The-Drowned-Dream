@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
@@ -8,7 +9,10 @@ namespace DrownedDream.EditorTools
     /// 原型佔位地圖：產生 2048×2048 地圖圖 + 碰撞遮罩圖（黑 = 牆），切成 4×4 區塊。
     /// 美術交付正式圖後，直接替換 MapConfig 內的圖片即可，不再使用此佔位。
     ///
-    /// 路線（蛇行）：第 3 列 左→右，往下；第 2 列 右→左，往下；第 1 列 左→右，往下；第 0 列 右→左（Boss 在左下角）。
+    /// 中央 2×2（區塊 1~2 × 1~2）打通成一間 Boss 房；外圍一圈為探索路線（2026-10-04）：
+    /// 起點左上 (0,3) → 上排往右 → 從 (3,3) 地板洞掉進右側直井（(3,2)+(3,1) 打通）→ 一路落到 (3,0)
+    /// → 下排往左 → (0,0) 爬階梯上 (0,1) → 右側唯一入口進 Boss 房。
+    /// 支線：起點 (0,3) 地板洞往下是死路小房間 (0,2)（有階梯回去）。
     /// </summary>
     internal static class PrototypeMapLayout
     {
@@ -36,13 +40,39 @@ namespace DrownedDream.EditorTools
         /// <summary>有上下通道的區塊對（上方區塊的 col, 上方 row）。下方區塊會產生階梯。</summary>
         public static readonly Vector2Int[] VerticalLinks =
         {
-            new Vector2Int(3, 3),
-            new Vector2Int(0, 2),
-            new Vector2Int(3, 1),
+            new Vector2Int(3, 3), // (3,3) → 右側直井
+            new Vector2Int(3, 1), // 右側直井 → (3,0)
+            new Vector2Int(0, 1), // (0,0) ↔ (0,1)
+            new Vector2Int(0, 3), // 起點 → 支線小房間 (0,2)
         };
 
-        /// <summary>Boss 房（左下角）：Boss 站在左側地面，地形另外設計。</summary>
-        public static readonly Vector2Int BossRoom = new Vector2Int(0, 0);
+        /// <summary>中央 Boss 房（區塊座標 x, y, 寬, 高）。</summary>
+        public static readonly RectInt BossArena = new RectInt(1, 1, 2, 2);
+
+        /// <summary>右側直井：這兩個區塊之間的牆打通（下方, 上方）。</summary>
+        private static readonly (Vector2Int lower, Vector2Int upper) RightShaft = (new Vector2Int(3, 1), new Vector2Int(3, 2));
+
+        /// <summary>Boss 房地面高度（單位，站立面）。</summary>
+        public static float ArenaFloorY => BossArena.y * RoomUnits + 0.5f;
+        /// <summary>Boss 房水平中央（單位）。</summary>
+        public static float ArenaCenterX => (BossArena.x + BossArena.width / 2f) * RoomUnits;
+
+        /// <summary>區塊是否在 Boss 房內。</summary>
+        public static bool InArena(int col, int row) => BossArena.Contains(new Vector2Int(col, row));
+
+        /// <summary>(col-1,row) 與 (col,row) 之間的門是否封住（Boss 房只留左下入口；不讓外圍直接進 Boss 房）。</summary>
+        private static bool IsDoorClosed(int col, int row) =>
+            (col == 1 && row == 2) || (col == 3 && (row == 1 || row == 2));
+
+        /// <summary>
+        /// 浮台位置（世界座標，float1~6 Prefab 的根物件 = 底部中央，頂面再高 0.5）。產生地圖時一併算出，
+        /// 由 PrototypeSceneBuilder 放入 float Prefab（單向平台，可從下方跳穿）。浮台不畫在遮罩圖裡。
+        /// </summary>
+        public static readonly List<Vector2> PlatformSpots = new List<Vector2>();
+        /// <summary>浮台寬度（float Prefab：12 格 × 0.5 縮放 = 6 單位）。</summary>
+        public const float PlatformWidth = 6f;
+        /// <summary>階梯每層高差（單位；跳躍高度約 2.58，浮台為單向不會撞頭）。</summary>
+        private const float StepHeight = 2f;
 
         /// <summary>區塊內局部座標（單位）轉世界座標。</summary>
         public static Vector2 Local(int col, int row, float x, float y) =>
@@ -84,6 +114,7 @@ namespace DrownedDream.EditorTools
         private static bool[,] BuildWallGrid()
         {
             var w = new bool[Cells, Cells];
+            PlatformSpots.Clear();
 
             // 每個區塊四周 1 格牆（相鄰區塊共用邊界 = 2 格厚）
             for (int c = 0; c < Grid; c++)
@@ -102,11 +133,12 @@ namespace DrownedDream.EditorTools
                 }
             }
 
-            // 同一列相鄰區塊之間的門（地板上方 4 單位高）
+            // 同一列相鄰區塊之間的門（地板上方 4 單位高；Boss 房旁的門封住）
             for (int r = 0; r < Grid; r++)
             {
                 for (int c = 1; c < Grid; c++)
                 {
+                    if (IsDoorClosed(c, r)) continue;
                     int x = c * RoomCells;
                     for (int y = 1; y <= 8; y++)
                     {
@@ -134,33 +166,88 @@ namespace DrownedDream.EditorTools
                 }
                 for (int x = 13; x <= 24; x++) w[ox + X(x), upperY - 1] = false; // 最上層石台的頭頂空間
 
-                FillLocal(w, ox, lowerY, X, 26, 30, 1, 4);   // 貼地方塊（不用從石台底下鑽過）
-                FillLocal(w, ox, lowerY, X, 20, 24, 8, 8);
-                FillLocal(w, ox, lowerY, X, 26, 30, 12, 12);
-                FillLocal(w, ox, lowerY, X, 20, 24, 16, 16);
-                FillLocal(w, ox, lowerY, X, 26, 30, 20, 20);
-                FillLocal(w, ox, lowerY, X, 20, 24, 24, 24);
-                FillLocal(w, ox, lowerY, X, 17, 18, 28, 28); // 洞口下方偏一側的小石台：從這裡跳回上方區塊
+                AddStairs(link.x, link.y - 1, 0);
             }
 
-            // 一般區塊：貼地方塊（跳 2 單位上得去）+ 高平台；有洞或有階梯的區塊不放
+            BuildRightShaft(w);
+            BuildArena(w);
+
+            // 一般區塊：貼地方塊（跳 2 單位上得去）+ 高平台；有洞、有階梯、Boss 房的區塊不放
             for (int c = 0; c < Grid; c++)
             {
                 for (int r = 0; r < Grid; r++)
                 {
-                    if (HasStairs(c, r) || HasHole(c, r)) continue;
-                    if (c == BossRoom.x && r == BossRoom.y)
-                    {
-                        // Boss 房：左側留給 Boss 站地面；方塊在右側門口內（12~14），高平台在祭壇上方（9~12）躲子彈
-                        Fill(w, c * RoomCells + 24, r * RoomCells + 1, 4, 4);
-                        Fill(w, c * RoomCells + 18, r * RoomCells + 8, 6, 1);
-                        continue;
-                    }
-                    Fill(w, c * RoomCells + 8, r * RoomCells + 1, 8, 4);
-                    Fill(w, c * RoomCells + 18, r * RoomCells + 8, 8, 1);
+                    if (HasStairs(c, r) || HasHole(c, r) || InArena(c, r)) continue;
+                    Fill(w, c * RoomCells + 8, r * RoomCells + 1, 8, 4);  // 貼地方塊（4~8 單位，高 2）
+                    AddPlatform(c * RoomCells / 2f + 12f, r * RoomUnits + 4.5f); // 高浮台（9~15 單位，頂面 4.5）
                 }
             }
             return w;
+        }
+
+        /// <summary>
+        /// 在區塊 (col,row) 放之字浮台：中心左右交錯（4.5 / 11.5 單位），頂面從 2.5 起每層 +2；
+        /// extraSteps = 額外往下延伸的層數（直井用）。最後一層放在洞口正下方（中心 8），從這裡跳穿洞口回到上方區塊。
+        /// </summary>
+        private static void AddStairs(int col, int row, int extraSteps)
+        {
+            float ox = col * RoomUnits;
+            float oy = row * RoomUnits - extraSteps * StepHeight;
+            int steps = 6 + extraSteps;
+            for (int i = 0; i < steps; i++)
+            {
+                float x = (i % 2 == extraSteps % 2) ? 4.5f : 11.5f;
+                AddPlatform(ox + x, oy + 2.5f + i * StepHeight);
+            }
+            AddPlatform(ox + 8f, oy + 2.5f + steps * StepHeight); // 洞口正下方（頂面 14.5，上方地板 16.5）
+        }
+
+        /// <summary>加一個浮台（x = 中心、top = 頂面高度，單位）。</summary>
+        private static void AddPlatform(float x, float top) => PlatformSpots.Add(new Vector2(x, top - 0.5f));
+
+        /// <summary>
+        /// 右側直井：打通上下兩個區塊之間的牆。上方區塊已由 VerticalLinks 放了階梯浮台，
+        /// 這裡在下方區塊補 8 層，接到上方區塊第一層（每層高差 2，單向浮台可從下方跳穿）。
+        /// </summary>
+        private static void BuildRightShaft(bool[,] w)
+        {
+            int ox = RightShaft.lower.x * RoomCells;
+            int boundary = RightShaft.upper.y * RoomCells; // 上方區塊的地板列
+            for (int x = 1; x < RoomCells - 1; x++)
+            {
+                w[ox + x, boundary - 1] = false; // 下方區塊天花板
+                w[ox + x, boundary] = false;     // 上方區塊地板
+            }
+
+            float sx = RightShaft.lower.x * RoomUnits;
+            float sy = RightShaft.lower.y * RoomUnits;
+            for (int i = 0; i < 8; i++) // 頂面 2.5 ~ 16.5；上方區塊第一層頂面 18.5（中心 4.5）→ 這裡最後一層放 11.5 交錯
+            {
+                AddPlatform(sx + (i % 2 == 0 ? 11.5f : 4.5f), sy + 2.5f + i * StepHeight);
+            }
+        }
+
+        /// <summary>
+        /// 中央 Boss 房：打通 2×2 區塊內部的牆，只留外框與左下入口；
+        /// 左右各一組「貼地方塊 + 石台」讓玩家跳起來躲觸手掃地，中央留給 Boss（放大 2 倍，約 16 單位寬）。
+        /// </summary>
+        private static void BuildArena(bool[,] w)
+        {
+            int x0 = BossArena.x * RoomCells;
+            int y0 = BossArena.y * RoomCells;
+            int x1 = (BossArena.x + BossArena.width) * RoomCells - 1;
+            int y1 = (BossArena.y + BossArena.height) * RoomCells - 1;
+            for (int x = x0 + 1; x < x1; x++)
+            {
+                for (int y = y0 + 1; y < y1; y++) w[x, y] = false;
+            }
+
+            // 左側（入口那側）：貼地方塊在 22~25 單位（頂面高 2）、浮台在 16.5~22.5 單位（頂面高 4）
+            Fill(w, x0 + 12, y0 + 1, 6, 4);
+            AddPlatform(x0 / 2f + 3.5f, y0 / 2f + 4.5f);
+            // 右側鏡像
+            Fill(w, x1 - 17, y0 + 1, 6, 4);
+            AddPlatform((x1 + 1) / 2f - 3.5f, y0 / 2f + 4.5f);
         }
 
         /// <summary>將區塊內局部格範圍（含頭尾，x 經過鏡像函式）設為牆。</summary>
@@ -181,7 +268,7 @@ namespace DrownedDream.EditorTools
             }
         }
 
-        /// <summary>輸出碰撞遮罩：黑 = 牆、白 = 空。</summary>
+        /// <summary>輸出碰撞遮罩：黑 = 牆、白 = 空（浮台另用 Prefab 放置，不在遮罩裡）。</summary>
         private static void WriteMask(bool[,] walls)
         {
             var pixels = new Color32[ImageSize * ImageSize];

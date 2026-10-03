@@ -55,6 +55,8 @@
 
 重建場景**不會覆蓋**已存在的資產與道具 Prefab 的數值（只換圖；顯示名稱仍是「封印碎片」時改為「邪神雕像」）。
 
+建置前會先匯入新檔；若因此觸發腳本重新編譯，會跳出提示並中止（避免用舊程式建出場景），等編譯完再按一次。
+
 場景另建 `EventSystem`（InputSystemUIInputModule）與 Canvas 上的 `TitleScreen`（封面），`GameFlow` 流程：Title → Intro → Playing → Ending → 重載回 Title。
 
 ## Editor 工具

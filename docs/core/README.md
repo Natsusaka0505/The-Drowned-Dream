@@ -34,16 +34,16 @@ area / 回復道具 / 武器 / camera 規模小，Status 與 Action 寫在同一
 Assets/Scripts/
   Core/      GameFlow、GameEvents、IDamageable
   Data/      ScriptableObject 定義（Config、EnemyData、MapConfig、TerrainTileSet、AudioConfig）
-  Player/    PlayerStatus + 各 Action、Player（入口）、PlayerInputReader
-  Enemy/     EnemyStatus、EnemyAI、FearSource、BossController、BossProjectile
+  Player/    PlayerStatus + 各 Action、Player（入口）、PlayerInputReader、PlayerAnimator（角色逐格動畫）
+  Enemy/     EnemyStatus、EnemyAI、EnemyLook（瞳孔追視）、FearSource、BossController、EnemyAttacks（HazardSprites / EnemyProjectile 彈幕 / TelegraphStrike 預告範圍攻擊）
   Area/      BossArea、SealAltar
-  Item/      PickupItem（基底）、RecoveryItem、SealItem、TreasureChest（寶箱）
+  Item/      PickupItem（基底）、RecoveryItem、SealItem、TreasureChest（寶箱）、HiddenSealSpawner（第 5 個封印道具隨機出現）
   Weapon/    Harpoon
   Camera/    GameCamera
-  World/     Room、Checkpoint、BreathBonusZone、BreathGate、SanityStageObject
+  World/     Room、Checkpoint、BreathBonusZone、BreathGate、SanityStageObject、PlayerSpawnPoint（關卡起點）、PlatformGroup（平台設 Ground Layer）、SpriteFrameAnimator（逐格動畫）
   Audio/     BgmPlayer、GameAudio（音效 + 環境音）、AmbientEmitter（位置循環音）
   UI/        HUD、InventoryPanel、StoryPanel、TitleScreen（封面）、TitleButtonHover、HUDWidgets（UIFrameBar 框條 / UIBubbleRow 氧氣泡泡）、SanityScreenEffects、UIFactory
-  Editor/    場景 / 地圖產生器（含地形自動貼圖）
+  Editor/    場景 / 地圖產生器（含地形自動貼圖、關卡 Prefab 範本，見 08-map SD-03）
 ```
 
 ## 型別
