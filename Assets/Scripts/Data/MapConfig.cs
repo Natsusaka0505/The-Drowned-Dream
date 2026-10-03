@@ -7,14 +7,24 @@ namespace DrownedDream
     public class MapConfig : ScriptableObject
     {
         [Header("圖片")]
-        /// <summary>地圖美術圖（背景，2048×2048）</summary>
+        /// <summary>地圖美術圖（2048×2048；可通行處需透明，才看得到遠景）</summary>
         [SerializeField] private Texture2D _mapTexture;
-        /// <summary>地圖美術圖（背景，2048×2048）（唯讀）</summary>
+        /// <summary>地圖美術圖（2048×2048；可通行處需透明，才看得到遠景）（唯讀）</summary>
         public Texture2D MapTexture => _mapTexture;
         /// <summary>碰撞遮罩圖（同尺寸；黑色 = 牆 / 地板）</summary>
         [SerializeField] private Texture2D _collisionMask;
         /// <summary>碰撞遮罩圖（同尺寸；黑色 = 牆 / 地板）（唯讀）</summary>
         public Texture2D CollisionMask => _collisionMask;
+
+        /// <summary>遠景背景圖（不碰撞，視差捲動）</summary>
+        [SerializeField] private Texture2D _farBackground;
+        /// <summary>遠景背景圖（不碰撞，視差捲動）（唯讀）</summary>
+        public Texture2D FarBackground => _farBackground;
+        /// <summary>遠景跟隨攝影機的比例（1 = 跟著畫面不動，0 = 固定在世界）</summary>
+        [Range(0f, 1f)]
+        [SerializeField] private float _parallaxFollow = 0.9f;
+        /// <summary>遠景跟隨攝影機的比例（唯讀）</summary>
+        public float ParallaxFollow => _parallaxFollow;
 
         [Header("切分")]
         /// <summary>橫向區塊數</summary>

@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b940cb2569df5452db53d9beeca9c437, type: 3}
+  m_Name: Tentacle
+  m_EditorClassIdentifier: Assembly-CSharp::DrownedDream.EnemyData
+  _displayName: "\u89F8\u624B"
+  _behaviour: 1
+  _maxHits: 3
+  _moveSpeed: 0
+  _chaseSpeed: 4.5
+  _patrolDistance: 4
+  _detectRange: 2.5
+  _loseRangeMultiplier: 1.5
+  _attackRange: 2.5
+  _fearRange: 4
+  _attackDamage: 25
+  _attackWindup: 0.6
+  _attackActiveTime: 0.4
+  _attackCooldown: 1.5
+  _sanityDrainPerSecond: 4
+  _sanityRestoreOnKill: 15
+  _dropPrefab: {fileID: 5533108424267458306, guid: f42792adb77cc404cba79623134172b6, type: 3}
+  _dropChance: 1
+  _color: {r: 0.4, g: 0.7, b: 0.35, a: 1}
+  _size: {x: 0.8, y: 2}

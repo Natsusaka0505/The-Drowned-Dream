@@ -14,6 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DrownedDream.MapConfig
   _mapTexture: {fileID: 2800000, guid: 3358dbd297988440e88cb34eba02d638, type: 3}
   _collisionMask: {fileID: 2800000, guid: 59c14458095dd4c789ef5193466f8664, type: 3}
+  _farBackground: {fileID: 2800000, guid: f868d9cf0a3be4a328fc7082f5e4a8f3, type: 3}
+  _parallaxFollow: 0.9
   _columns: 4
   _rows: 4
   _pixelsPerUnit: 32

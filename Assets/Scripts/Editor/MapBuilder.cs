@@ -47,6 +47,7 @@ namespace DrownedDream.EditorTools
             float cellUnits = config.MaskCellPixels / (float)config.PixelsPerUnit;
             grid.cellSize = new Vector3(cellUnits, cellUnits, 0f);
 
+            BuildFarBackground(config, root.transform);
             BuildBackground(config, root.transform);
             BuildCollision(config, root.transform, groundLayer, tileSprite);
             return BuildRooms(config, root.transform);
@@ -63,6 +64,25 @@ namespace DrownedDream.EditorTools
             var bg = new GameObject("Background");
             bg.transform.SetParent(root, false);
             EditorBuildUtil.MakeSprite(bg, sprite, Color.white, -10);
+        }
+
+        /// <summary>遠景背景：不受光、排在最後面、視差跟隨攝影機（F-MAP-09）。</summary>
+        private static void BuildFarBackground(MapConfig config, Transform root)
+        {
+            if (config.FarBackground == null) return;
+            string path = AssetDatabase.GetAssetPath(config.FarBackground);
+            EditorBuildUtil.ConfigureSprite(path, 100, SpriteAlignment.Center, 4096, compressed: true);
+            var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+
+            var go = new GameObject("FarBackground");
+            go.transform.SetParent(root, false);
+            var size = MapSizeUnits(config);
+            go.transform.position = new Vector3(size.x / 2f, size.y / 2f, 0f);
+            var sr = EditorBuildUtil.MakeSprite(go, sprite, Color.white, -100);
+            var unlit = AssetDatabase.LoadAssetAtPath<Material>(EditorBuildUtil.SpriteUnlitMaterialPath);
+            if (unlit != null) sr.sharedMaterial = unlit;
+            var parallax = go.AddComponent<ParallaxBackground>();
+            EditorBuildUtil.Wire(parallax, ("_mapMin", Vector2.zero), ("_mapSize", size), ("_follow", config.ParallaxFollow));
         }
 
         /// <summary>讀取遮罩圖，暗色格放碰撞 Tile，合併成 CompositeCollider2D。</summary>

@@ -162,19 +162,17 @@ namespace DrownedDream.EditorTools
             SavePng(MaskPath, pixels);
         }
 
-        /// <summary>輸出佔位地圖：岩壁 + 由上往下變深的海水 + 區塊格線。</summary>
+        /// <summary>輸出佔位地圖：只畫岩壁，水域透明（讓後方遠景透出），區塊邊界畫淡格線。</summary>
         private static void WriteMap(bool[,] walls)
         {
             var pixels = new Color32[ImageSize * ImageSize];
-            var rock = new Color(0.2f, 0.24f, 0.3f);
-            var rockEdge = new Color(0.32f, 0.36f, 0.42f);
-            var waterTop = new Color(0.05f, 0.14f, 0.22f);
-            var waterBottom = new Color(0.01f, 0.03f, 0.07f);
+            var rock = new Color(0.13f, 0.14f, 0.16f);
+            var rockEdge = new Color(0.24f, 0.27f, 0.32f);
+            var gridLine = new Color(1f, 1f, 1f, 0.12f);
             int roomPixels = ImageSize / Grid;
 
             for (int py = 0; py < ImageSize; py++)
             {
-                var water = Color.Lerp(waterBottom, waterTop, py / (float)ImageSize);
                 for (int px = 0; px < ImageSize; px++)
                 {
                     int cx = px / CellPixels;
@@ -185,13 +183,11 @@ namespace DrownedDream.EditorTools
                         bool edge = cy + 1 < Cells && !walls[cx, cy + 1];
                         col = edge && py % CellPixels >= CellPixels - 3 ? rockEdge : rock;
                         float n = Mathf.PerlinNoise(px * 0.05f, py * 0.05f) * 0.06f;
-                        col = new Color(col.r + n, col.g + n, col.b + n);
+                        col = new Color(col.r + n, col.g + n, col.b + n, 1f);
                     }
                     else
                     {
-                        float n = Mathf.PerlinNoise(px * 0.01f, py * 0.01f) * 0.03f;
-                        col = new Color(water.r + n, water.g + n, water.b + n);
-                        if (px % roomPixels == 0 || py % roomPixels == 0) col = Color.Lerp(col, Color.white, 0.08f);
+                        col = px % roomPixels == 0 || py % roomPixels == 0 ? gridLine : Color.clear;
                     }
                     pixels[py * ImageSize + px] = col;
                 }

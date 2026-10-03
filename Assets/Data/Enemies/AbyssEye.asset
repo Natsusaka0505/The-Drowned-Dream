@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b940cb2569df5452db53d9beeca9c437, type: 3}
+  m_Name: AbyssEye
+  m_EditorClassIdentifier: Assembly-CSharp::DrownedDream.EnemyData
+  _displayName: "\u6DF1\u6DF5\u4E4B\u773C"
+  _behaviour: 2
+  _maxHits: 4
+  _moveSpeed: 0
+  _chaseSpeed: 4.5
+  _patrolDistance: 4
+  _detectRange: 0
+  _loseRangeMultiplier: 1.5
+  _attackRange: 0
+  _fearRange: 7
+  _attackDamage: 0
+  _attackWindup: 0.6
+  _attackActiveTime: 0.4
+  _attackCooldown: 1.5
+  _sanityDrainPerSecond: 8
+  _sanityRestoreOnKill: 25
+  _dropPrefab: {fileID: 0}
+  _dropChance: 1
+  _color: {r: 0.95, g: 0.9, b: 0.4, a: 1}
+  _size: {x: 1.2, y: 1.2}

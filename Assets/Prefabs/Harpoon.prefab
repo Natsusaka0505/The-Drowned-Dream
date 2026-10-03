@@ -186,10 +186,9 @@ MonoBehaviour:
   _groundMask:
     serializedVersion: 2
     m_Bits: 64
-  _hitMask:
+  _enemyMask:
     serializedVersion: 2
     m_Bits: 256
-  _visual: {fileID: 7368501867680442811}
 --- !u!1 &6253634277416735670
 GameObject:
   m_ObjectHideFlags: 0

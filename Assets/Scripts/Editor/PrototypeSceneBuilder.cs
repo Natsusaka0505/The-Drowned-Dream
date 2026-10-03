@@ -25,6 +25,8 @@ namespace DrownedDream.EditorTools
         public const string ArtDir = "Assets/Art/Placeholder";
         /// <summary>Prefab 目錄。</summary>
         private const string PrefabDir = "Assets/Prefabs";
+        /// <summary>遠景背景圖路徑。</summary>
+        public const string FarBackgroundPath = "Assets/Art/Background/background.png";
         /// <summary>地圖設定資產路徑。</summary>
         public const string MapConfigPath = "Assets/Data/Map/MapConfig.asset";
 
@@ -129,10 +131,28 @@ namespace DrownedDream.EditorTools
             d.Map = Asset<MapConfig>(MapConfigPath, so => Set(so,
                 ("_mapTexture", AssetDatabase.LoadAssetAtPath<Texture2D>(PrototypeMapLayout.MapPath)),
                 ("_collisionMask", AssetDatabase.LoadAssetAtPath<Texture2D>(PrototypeMapLayout.MaskPath)),
+                ("_farBackground", AssetDatabase.LoadAssetAtPath<Texture2D>(FarBackgroundPath)),
                 ("_columns", PrototypeMapLayout.Grid),
                 ("_rows", PrototypeMapLayout.Grid),
                 ("_pixelsPerUnit", PrototypeMapLayout.PixelsPerUnit),
                 ("_maskCellPixels", PrototypeMapLayout.CellPixels)));
+            if (d.Map.MapTexture == null || d.Map.CollisionMask == null)
+            {
+                // 圖片參照遺失（例如佔位圖重新產生）時補回佔位圖
+                if (d.Map.MapTexture == null) Wire(d.Map, ("_mapTexture", AssetDatabase.LoadAssetAtPath<Texture2D>(PrototypeMapLayout.MapPath)));
+                if (d.Map.CollisionMask == null) Wire(d.Map, ("_collisionMask", AssetDatabase.LoadAssetAtPath<Texture2D>(PrototypeMapLayout.MaskPath)));
+                EditorUtility.SetDirty(d.Map);
+            }
+            if (d.Map.FarBackground == null)
+            {
+                // 舊的 MapConfig 沒有遠景欄位時補上（不覆蓋企劃已設定的值）
+                var far = AssetDatabase.LoadAssetAtPath<Texture2D>(FarBackgroundPath);
+                if (far != null)
+                {
+                    Wire(d.Map, ("_farBackground", far));
+                    EditorUtility.SetDirty(d.Map);
+                }
+            }
 
             d.Seal = ItemPrefab<SealItem>("SealFragment", "封印碎片", new Color(1f, 0.85f, 0.3f), null);
             d.Pill = ItemPrefab<RecoveryItem>("Pill", "鎮靜藥丸", new Color(0.95f, 0.75f, 0.9f),

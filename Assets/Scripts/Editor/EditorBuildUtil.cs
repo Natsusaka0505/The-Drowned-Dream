@@ -11,6 +11,8 @@ namespace DrownedDream.EditorTools
     {
         /// <summary>URP 2D 預設受光 Sprite 材質路徑。</summary>
         public const string SpriteLitMaterialPath = "Packages/com.unity.render-pipelines.universal/Runtime/Materials/Sprite-Lit-Default.mat";
+        /// <summary>URP 2D 不受光 Sprite 材質路徑（保留原圖顏色）。</summary>
+        public const string SpriteUnlitMaterialPath = "Packages/com.unity.render-pipelines.universal/Runtime/Materials/Sprite-Unlit-Default.mat";
 
         /// <summary>遞迴建立資料夾（已存在則略過）。</summary>
         public static void EnsureFolder(string path)
@@ -136,8 +138,8 @@ namespace DrownedDream.EditorTools
             return AssetDatabase.LoadAssetAtPath<Sprite>(path);
         }
 
-        /// <summary>將圖片設定為 Sprite（指定 PPU 與 pivot）。</summary>
-        public static void ConfigureSprite(string path, int pixelsPerUnit, SpriteAlignment alignment)
+        /// <summary>將圖片設定為 Sprite（指定 PPU、pivot、最大尺寸、是否壓縮）。</summary>
+        public static void ConfigureSprite(string path, int pixelsPerUnit, SpriteAlignment alignment, int maxSize = 2048, bool compressed = false)
         {
             var importer = (TextureImporter)AssetImporter.GetAtPath(path);
             if (importer == null) return;
@@ -146,7 +148,7 @@ namespace DrownedDream.EditorTools
             bool dirty = importer.textureType != TextureImporterType.Sprite
                          || settings.spritePixelsPerUnit != pixelsPerUnit
                          || settings.spriteAlignment != (int)alignment
-                         || importer.maxTextureSize < 2048;
+                         || importer.maxTextureSize < maxSize;
             if (!dirty) return;
 
             settings.textureType = TextureImporterType.Sprite;
@@ -155,8 +157,8 @@ namespace DrownedDream.EditorTools
             settings.spriteAlignment = (int)alignment;
             settings.filterMode = FilterMode.Bilinear;
             importer.SetTextureSettings(settings);
-            importer.maxTextureSize = Mathf.Max(importer.maxTextureSize, 2048);
-            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.maxTextureSize = Mathf.Max(importer.maxTextureSize, maxSize);
+            importer.textureCompression = compressed ? TextureImporterCompression.Compressed : TextureImporterCompression.Uncompressed;
             importer.SaveAndReimport();
         }
 
