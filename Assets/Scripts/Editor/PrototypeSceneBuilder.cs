@@ -193,7 +193,7 @@ namespace DrownedDream.EditorTools
             d.Fish = Asset<EnemyData>($"{DataDir}/Enemies/FishMonster.asset", so => Set(so,
                 ("_displayName", "巡游魚怪"),
                 ("_behaviour", EnemyBehaviour.Patrol),
-                ("_maxHits", 2),
+                ("_maxHits", 3),
                 ("_moveSpeed", 2f),
                 ("_chaseSpeed", 4.5f),
                 ("_patrolDistance", 4f),
@@ -230,7 +230,7 @@ namespace DrownedDream.EditorTools
             d.Eye = Asset<EnemyData>($"{DataDir}/Enemies/AbyssEye.asset", so => Set(so,
                 ("_displayName", "深淵之眼"),
                 ("_behaviour", EnemyBehaviour.Passive),
-                ("_maxHits", 4),
+                ("_maxHits", 3),
                 ("_moveSpeed", 0f),
                 ("_detectRange", 0f),
                 ("_attackRange", 0f),
@@ -398,44 +398,56 @@ namespace DrownedDream.EditorTools
         {
             var root = new GameObject("Content").transform;
             const float floorItemY = 1.1f;   // 地板上的道具高度
-            const float lowPlatY = 3.6f;      // 低平台（頂 3.0）上的道具高度
-            const float highPlatY = 5.6f;     // 高平台（頂 5.0）上的道具高度
+            const float lowPlatY = 3.1f;      // 貼地方塊（頂 2.5）上的道具高度
+            const float highPlatY = 5.1f;     // 高平台（頂 4.5）上的道具高度
+            const float floorY = 0.5f;        // 地面高度（敵人腳底，F-ENM-00 怪物站在地面）
+            // 一般區塊右側空地（貼地方塊 8 ~ 牆 15.5，扣掉魚怪半寬 0.7）：魚怪只在這段巡邏 / 追擊
+            Vector2 FishZone(int col) => new Vector2(col * PrototypeMapLayout.RoomUnits + 8.7f, col * PrototypeMapLayout.RoomUnits + 14.8f);
 
             // 第 3 排（起點）
-            MakeCheckpoint(root, PrototypeMapLayout.Local(0, 3, 5f, floorItemY));
+            MakeCheckpoint(root, PrototypeMapLayout.Local(0, 3, 2f, floorItemY)); // 避開貼地方塊（4~8）
             MakePickup(root, d.Pill, PrototypeMapLayout.Local(0, 3, 11f, highPlatY));
-            MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(1, 3, 8f, 3f));
-            MakeEnemy(root, d.Eye, PrototypeMapLayout.Local(2, 3, 12f, 11f));
+            MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(1, 3, 10f, floorY), FishZone(1));
+            MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(1, 3, 13.5f, floorY), FishZone(1));
+            MakeEnemy(root, d.Eye, PrototypeMapLayout.Local(2, 3, 12f, floorY));
+            MakeEnemy(root, d.Eye, PrototypeMapLayout.Local(2, 3, 2f, floorY));
             MakePickup(root, d.Seal, PrototypeMapLayout.Local(2, 3, 11f, highPlatY));
             MakeHallucination(root, PrototypeMapLayout.Local(2, 3, 6f, 12f), 1);
             MakePickup(root, d.Medkit, PrototypeMapLayout.Local(3, 3, 12f, floorItemY));
 
             // 第 2 排（右 → 左）
-            MakeEnemy(root, d.Tentacle, PrototypeMapLayout.Local(3, 2, 14.5f, 1.5f));
-            MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(2, 2, 8f, 3f));
+            MakeEnemy(root, d.Tentacle, PrototypeMapLayout.Local(3, 2, 12f, floorY)); // 避開右側階梯方塊
+            MakeEnemy(root, d.Tentacle, PrototypeMapLayout.Local(3, 2, 3f, floorY));  // 守住往左的門
+            MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(2, 2, 10f, floorY), FishZone(2));
+            MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(2, 2, 13.5f, floorY), FishZone(2));
             MakePickup(root, d.Pill, PrototypeMapLayout.Local(2, 2, 11f, highPlatY));
             MakePickup(root, d.Medkit, PrototypeMapLayout.Local(1, 2, 6f, lowPlatY));
-            MakeEnemy(root, d.Eye, PrototypeMapLayout.Local(1, 2, 3f, 11f));
+            MakeEnemy(root, d.Eye, PrototypeMapLayout.Local(1, 2, 3f, floorY));
+            MakeEnemy(root, d.Eye, PrototypeMapLayout.Local(1, 2, 14f, floorY));
             MakeHallucination(root, PrototypeMapLayout.Local(1, 2, 9f, 12f), 2);
             MakeCheckpoint(root, PrototypeMapLayout.Local(0, 2, 12f, floorItemY));
 
             // 第 1 排（左 → 右），(0,1) 有憋氣屏障擋住往右的路
             MakeBreathGate(root, PrototypeMapLayout.Local(0, 1, 14f, 0.5f), new Vector2(0.5f, 15f), d.Audio.Water);
-            MakePickup(root, d.Seal, PrototypeMapLayout.Local(1, 1, 8f, floorItemY));
-            MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(1, 1, 10f, 3f));
-            MakeEnemy(root, d.Eye, PrototypeMapLayout.Local(2, 1, 8f, 11f));
+            MakePickup(root, d.Seal, PrototypeMapLayout.Local(1, 1, 9f, floorItemY)); // 避開貼地方塊（4~8）
+            MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(1, 1, 10f, floorY), FishZone(1));
+            MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(1, 1, 13.5f, floorY), FishZone(1));
+            MakeEnemy(root, d.Eye, PrototypeMapLayout.Local(2, 1, 10f, floorY)); // 避開貼地方塊（4~8）
+            MakeEnemy(root, d.Eye, PrototypeMapLayout.Local(2, 1, 14f, floorY));
             MakePickup(root, d.Medkit, PrototypeMapLayout.Local(2, 1, 11f, highPlatY));
             MakeCheckpoint(root, PrototypeMapLayout.Local(3, 1, 4.5f, floorItemY));
 
             // 第 0 排（右 → 左），終點 Boss
             MakePickup(root, d.Seal, PrototypeMapLayout.Local(3, 0, 1.5f, floorItemY));
-            MakeEnemy(root, d.Tentacle, PrototypeMapLayout.Local(3, 0, 3.5f, 1.5f));
-            MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(2, 0, 8f, 3f));
+            MakeEnemy(root, d.Tentacle, PrototypeMapLayout.Local(3, 0, 3.5f, floorY));
+            MakeEnemy(root, d.Tentacle, PrototypeMapLayout.Local(3, 0, 12f, floorY)); // 階梯方塊（13~15.5）左邊
+            MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(2, 0, 10f, floorY), FishZone(2));
+            MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(2, 0, 13.5f, floorY), FishZone(2));
             MakePickup(root, d.Pill, PrototypeMapLayout.Local(2, 0, 11f, highPlatY));
             MakeCheckpoint(root, PrototypeMapLayout.Local(1, 0, 12f, floorItemY));
             MakePickup(root, d.Medkit, PrototypeMapLayout.Local(1, 0, 6f, lowPlatY));
 
-            var boss = MakeBoss(root, PrototypeMapLayout.Local(0, 0, 4f, 9f));
+            var boss = MakeBoss(root, PrototypeMapLayout.Local(0, 0, 4f, floorY)); // Boss 也站在地面（F-ENM-00）
             MakeAltar(root, boss, PrototypeMapLayout.Local(0, 0, 10f, 1f));
             MakeBossArea(root, boss, PrototypeMapLayout.Local(0, 0, 8f, 8f));
         }
@@ -524,12 +536,12 @@ namespace DrownedDream.EditorTools
             return prefab;
         }
 
-        /// <summary>建立一般敵人。</summary>
-        private static void MakeEnemy(Transform parent, EnemyData data, Vector2 pos)
+        /// <summary>建立一般敵人：feet = 地面位置（碰撞框底部貼地）；territory = 活動範圍世界 X（左, 右），null = 不限制。</summary>
+        private static void MakeEnemy(Transform parent, EnemyData data, Vector2 feet, Vector2? territory = null)
         {
             var go = new GameObject($"Enemy_{data.name}") { layer = s_enemyLayer };
             go.transform.SetParent(parent);
-            go.transform.position = pos;
+            go.transform.position = feet + Vector2.up * (data.Size.y / 2f); // 碰撞框底部貼地
             var body = go.AddComponent<Rigidbody2D>();
             body.bodyType = RigidbodyType2D.Kinematic;
             var col = go.AddComponent<BoxCollider2D>();
@@ -542,14 +554,15 @@ namespace DrownedDream.EditorTools
             Wire(status, ("_data", data));
             var ai = go.AddComponent<EnemyAI>();
             Wire(ai, ("_renderer", sr));
+            if (territory.HasValue) Wire(ai, ("_minX", territory.Value.x), ("_maxX", territory.Value.y));
         }
 
-        /// <summary>建立 Boss。</summary>
-        private static BossController MakeBoss(Transform parent, Vector2 pos)
+        /// <summary>建立 Boss（feet = 地面位置；碰撞框高 6，底部貼地）。</summary>
+        private static BossController MakeBoss(Transform parent, Vector2 feet)
         {
             var go = new GameObject("Boss") { layer = s_enemyLayer };
             go.transform.SetParent(parent);
-            go.transform.position = pos;
+            go.transform.position = feet + Vector2.up * 3f;
             var col = go.AddComponent<BoxCollider2D>();
             col.size = new Vector2(4f, 6f);
             col.isTrigger = true;

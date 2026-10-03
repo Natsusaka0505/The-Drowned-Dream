@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::DrownedDream.EnemyData
   _displayName: "\u5DE1\u6E38\u9B5A\u602A"
   _behaviour: 0
-  _maxHits: 2
+  _maxHits: 3
   _moveSpeed: 2
   _chaseSpeed: 4.5
   _patrolDistance: 4
