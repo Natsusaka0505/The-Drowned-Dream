@@ -33,8 +33,12 @@ namespace DrownedDream
         [SerializeField] private float _gravityScale = 1.6f;
         /// <summary>重力倍率（越低越有水中漂浮感）（唯讀）</summary>
         public float GravityScale => _gravityScale;
+        /// <summary>下降時的重力倍率（大於 1 = 過了最高點後加速落下）</summary>
+        [Tooltip("下降時的重力倍率")] [SerializeField] private float _fallGravityMultiplier = 2f;
+        /// <summary>下降時的重力倍率（唯讀）</summary>
+        public float FallGravityMultiplier => _fallGravityMultiplier;
         /// <summary>最大下落速度（模擬水阻）</summary>
-        [Tooltip("最大下落速度（水阻）")] [SerializeField] private float _maxFallSpeed = 6f;
+        [Tooltip("最大下落速度（水阻）")] [SerializeField] private float _maxFallSpeed = 12f;
         /// <summary>最大下落速度（模擬水阻）（唯讀）</summary>
         public float MaxFallSpeed => _maxFallSpeed;
         /// <summary>提早放開跳躍鍵時保留的上升速度比例</summary>

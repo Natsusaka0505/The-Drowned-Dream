@@ -18,7 +18,8 @@ MonoBehaviour:
   _airControl: 0.7
   _jumpVelocity: 9
   _gravityScale: 1.6
-  _maxFallSpeed: 6
+  _fallGravityMultiplier: 2
+  _maxFallSpeed: 12
   _jumpCutMultiplier: 0.5
   _coyoteTime: 0.1
   _jumpBufferTime: 0.12

@@ -101,6 +101,8 @@ namespace DrownedDream
                 _jumpCutRequested = false;
             }
 
+            // 下降時加重重力，讓落下比上升快（手感較俐落）
+            _body.gravityScale = velocity.y < 0f ? Config.GravityScale * Config.FallGravityMultiplier : Config.GravityScale;
             if (velocity.y < -Config.MaxFallSpeed) velocity.y = -Config.MaxFallSpeed;
             _body.linearVelocity = velocity;
         }
