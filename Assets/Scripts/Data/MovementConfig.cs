@@ -12,37 +12,37 @@ namespace DrownedDream
         /// <summary>最大水平速度（單位/秒）（唯讀）</summary>
         public float MaxSpeed => _maxSpeed;
         /// <summary>地面加速度</summary>
-        [SerializeField] private float _acceleration = 30f;
+        [SerializeField] private float _acceleration = 0f;
         /// <summary>地面加速度（唯讀）</summary>
         public float Acceleration => _acceleration;
         /// <summary>放開方向鍵時的減速度</summary>
-        [SerializeField] private float _deceleration = 25f;
+        [SerializeField] private float _deceleration = 0f;
         /// <summary>放開方向鍵時的減速度（唯讀）</summary>
         public float Deceleration => _deceleration;
         /// <summary>空中加速度倍率</summary>
-        [Tooltip("空中加速度倍率")] [SerializeField] private float _airControl = 0.7f;
+        [Tooltip("空中加速度倍率")] [SerializeField] private float _airControl = 0f;
         /// <summary>空中加速度倍率（唯讀）</summary>
         public float AirControl => _airControl;
 
         [Header("跳躍 / 重力（水下手感）")]
         /// <summary>起跳初速度</summary>
-        [SerializeField] private float _jumpVelocity = 9f;
+        [SerializeField] private float _jumpVelocity = 0f;
         /// <summary>起跳初速度（唯讀）</summary>
         public float JumpVelocity => _jumpVelocity;
         /// <summary>重力倍率（越低越有水中漂浮感）</summary>
-        [SerializeField] private float _gravityScale = 1.6f;
+        [SerializeField] private float _gravityScale = 0f;
         /// <summary>重力倍率（越低越有水中漂浮感）（唯讀）</summary>
         public float GravityScale => _gravityScale;
         /// <summary>下降時的重力倍率（大於 1 = 過了最高點後加速落下）</summary>
-        [Tooltip("下降時的重力倍率")] [SerializeField] private float _fallGravityMultiplier = 2f;
+        [Tooltip("下降時的重力倍率")] [SerializeField] private float _fallGravityMultiplier = 0f;
         /// <summary>下降時的重力倍率（唯讀）</summary>
         public float FallGravityMultiplier => _fallGravityMultiplier;
         /// <summary>最大下落速度（模擬水阻）</summary>
-        [Tooltip("最大下落速度（水阻）")] [SerializeField] private float _maxFallSpeed = 12f;
+        [Tooltip("最大下落速度（水阻）")] [SerializeField] private float _maxFallSpeed = 0f;
         /// <summary>最大下落速度（模擬水阻）（唯讀）</summary>
         public float MaxFallSpeed => _maxFallSpeed;
         /// <summary>提早放開跳躍鍵時保留的上升速度比例</summary>
-        [Range(0f, 1f)] [SerializeField] private float _jumpCutMultiplier = 0.5f;
+        [Range(0f, 1f)] [SerializeField] private float _jumpCutMultiplier = 0f;
         /// <summary>提早放開跳躍鍵時保留的上升速度比例（唯讀）</summary>
         public float JumpCutMultiplier => _jumpCutMultiplier;
         /// <summary>離開地面後仍可起跳的寬限秒數</summary>
