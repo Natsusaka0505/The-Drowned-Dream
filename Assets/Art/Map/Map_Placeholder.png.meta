@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 27ff6fc045b8d4fcfbb7d0b5fa4052a7
+guid: 3358dbd297988440e88cb34eba02d638
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -5152297722893417757
-    second: backwall_tc_0
+      213: 916174962616338087
+    second: Map_Placeholder_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -49,9 +49,9 @@ TextureImporter:
   spriteMode: 1
   spriteExtrude: 1
   spriteMeshType: 1
-  alignment: 0
+  alignment: 6
   spritePivot: {x: 0.5, y: 0.5}
-  spritePixelsToUnits: 256
+  spritePixelsToUnits: 32
   spriteBorder: {x: 0, y: 0, z: 0, w: 0}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: backwall_tc_0
+      name: Map_Placeholder_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 128
-        height: 128
+        width: 2048
+        height: 2048
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 3e242e1e48c5f78b0800000000000000
-      internalID: -5152297722893417757
+      spriteID: 7a68ade3648e6bc00800000000000000
+      internalID: 916174962616338087
       vertices: []
       indices: 
       edges: []

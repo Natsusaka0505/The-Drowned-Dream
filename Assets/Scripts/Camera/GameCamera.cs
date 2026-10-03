@@ -3,7 +3,7 @@ using UnityEngine;
 namespace DrownedDream
 {
     /// <summary>
-    /// camera（docs/core，F-MAP-06）：平常跟隨玩家（只限制在地圖範圍內）；Boss 廳演出時切到 Boss 特寫，再切回玩家。
+    /// camera（docs/core）：平常跟隨玩家（限制在目前 Room 內）；第一次進 Boss 房時切到 Boss 特寫，再切回玩家。
     /// </summary>
     [RequireComponent(typeof(Camera))]
     public class GameCamera : MonoBehaviour
@@ -28,8 +28,6 @@ namespace DrownedDream
         [SerializeField] private float _zoomSpeed = 3f;
         /// <summary>跟隨玩家時的偏移。</summary>
         [SerializeField] private Vector2 _offset = new Vector2(0f, 1f);
-        /// <summary>地圖世界範圍（攝影機不會拍到範圍外）；寬高為 0 時不限制。</summary>
-        [SerializeField] private Rect _mapBounds;
 
         /// <summary>攝影機元件。</summary>
         private Camera _camera;
@@ -41,7 +39,7 @@ namespace DrownedDream
         private Vector3 _shakeOffset;
         /// <summary>目標畫面大小。</summary>
         private float _targetSize;
-        /// <summary>是否為 Boss 特寫模式（不限制在地圖內、不加偏移）。</summary>
+        /// <summary>是否為 Boss 特寫模式（不限制在 Room 內、不加偏移）。</summary>
         private bool _closeUp;
 
         /// <summary>目前跟隨的目標。</summary>
@@ -114,17 +112,18 @@ namespace DrownedDream
             return p;
         }
 
-        /// <summary>限制在地圖範圍內（地圖比畫面小時置中）。</summary>
+        /// <summary>限制在目前區塊內；區塊比畫面小時置中。</summary>
         private Vector3 Clamp(Vector3 pos)
         {
-            var b = _mapBounds;
-            if (b.width <= 0f || b.height <= 0f) return pos;
+            var room = Room.Current;
+            if (room == null) return pos;
 
+            var b = room.Bounds;
             float halfH = _camera.orthographicSize;
             float halfW = halfH * _camera.aspect;
 
-            pos.x = b.width <= halfW * 2f ? b.center.x : Mathf.Clamp(pos.x, b.xMin + halfW, b.xMax - halfW);
-            pos.y = b.height <= halfH * 2f ? b.center.y : Mathf.Clamp(pos.y, b.yMin + halfH, b.yMax - halfH);
+            pos.x = b.size.x <= halfW * 2f ? b.center.x : Mathf.Clamp(pos.x, b.min.x + halfW, b.max.x - halfW);
+            pos.y = b.size.y <= halfH * 2f ? b.center.y : Mathf.Clamp(pos.y, b.min.y + halfH, b.max.y - halfH);
             return pos;
         }
     }

@@ -12,8 +12,8 @@ namespace DrownedDream.EditorTools
 {
     /// <summary>
     /// 一鍵產生原型場景：選單 Drowned Dream/Build Prototype Scene。
-    /// 建立 Layer、佔位圖、ScriptableObject 資料、魚叉 Prefab、隨機洞窟地圖（SD-03）與自動擺放的關卡內容。
-    /// 已存在的資料資產不會覆蓋（保留企劃調整過的數值）；場景、洞窟遮罩與魚叉 Prefab 每次依種子重建。
+    /// 建立 Layer、佔位圖、ScriptableObject 資料、魚叉 Prefab、地圖（4×4 區塊）與關卡內容。
+    /// 已存在的資料資產不會覆蓋（保留企劃調整過的數值）；場景與魚叉 Prefab 每次重建。
     /// </summary>
     public static class PrototypeSceneBuilder
     {
@@ -25,12 +25,6 @@ namespace DrownedDream.EditorTools
         public const string ArtDir = "Assets/Art/Placeholder";
         /// <summary>Prefab 目錄。</summary>
         private const string PrefabDir = "Assets/Prefabs";
-        /// <summary>水流（憋氣屏障外觀）圖路徑。</summary>
-        private const string WaterfallPath = "Assets/Art/Map/Props/prop_waterfall.png";
-        /// <summary>每單位像素數。</summary>
-        private const int PixelsPerUnit = 32;
-        /// <summary>遮罩一格像素數（= 碰撞格 0.5 單位）。</summary>
-        private const int CellPixels = 16;
         /// <summary>遠景背景圖路徑。</summary>
         public const string FarBackgroundPath = "Assets/Art/Background/background.png";
         /// <summary>地圖設定資產路徑。</summary>
@@ -81,6 +75,7 @@ namespace DrownedDream.EditorTools
             s_harpoonLayer = EnsureLayer("Harpoon", 9);
             s_square = EnsureShapeSprite(ArtDir, "Square", circle: false);
             s_circle = EnsureShapeSprite(ArtDir, "Circle", circle: true);
+            PrototypeMapLayout.EnsurePlaceholders();
 
             var data = CreateData();
             var harpoonPrefab = CreateHarpoonPrefab();
@@ -109,8 +104,6 @@ namespace DrownedDream.EditorTools
             public HarpoonConfig Harpoon;
             /// <summary>地圖設定。</summary>
             public MapConfig Map;
-            /// <summary>洞窟生成參數。</summary>
-            public CaveGenConfig Cave;
             /// <summary>封印碎片 Prefab。</summary>
             public GameObject Seal;
             /// <summary>鎮靜藥丸 Prefab（回復 SAN）。</summary>
@@ -140,10 +133,20 @@ namespace DrownedDream.EditorTools
             };
 
             d.Map = Asset<MapConfig>(MapConfigPath, so => Set(so,
+                ("_mapTexture", AssetDatabase.LoadAssetAtPath<Texture2D>(PrototypeMapLayout.MapPath)),
+                ("_collisionMask", AssetDatabase.LoadAssetAtPath<Texture2D>(PrototypeMapLayout.MaskPath)),
                 ("_farBackground", AssetDatabase.LoadAssetAtPath<Texture2D>(FarBackgroundPath)),
-                ("_pixelsPerUnit", PixelsPerUnit),
-                ("_maskCellPixels", CellPixels)));
-            d.Cave = Asset<CaveGenConfig>(CaveBuild.ConfigPath);
+                ("_columns", PrototypeMapLayout.Grid),
+                ("_rows", PrototypeMapLayout.Grid),
+                ("_pixelsPerUnit", PrototypeMapLayout.PixelsPerUnit),
+                ("_maskCellPixels", PrototypeMapLayout.CellPixels)));
+            if (d.Map.MapTexture == null || d.Map.CollisionMask == null)
+            {
+                // 圖片參照遺失（例如佔位圖重新產生）時補回佔位圖
+                if (d.Map.MapTexture == null) Wire(d.Map, ("_mapTexture", AssetDatabase.LoadAssetAtPath<Texture2D>(PrototypeMapLayout.MapPath)));
+                if (d.Map.CollisionMask == null) Wire(d.Map, ("_collisionMask", AssetDatabase.LoadAssetAtPath<Texture2D>(PrototypeMapLayout.MaskPath)));
+                EditorUtility.SetDirty(d.Map);
+            }
             MapBuilder.EnsureTerrainSet(d.Map); // 舊的 MapConfig 沒有地形素材時補上預設切片
             if (d.Map.FarBackground == null)
             {
@@ -255,17 +258,10 @@ namespace DrownedDream.EditorTools
             globalLight.intensity = 0.85f;
             globalLight.color = new Color(0.55f, 0.75f, 1f);
 
-            // 依種子生成洞窟 → 輸出遮罩 → MapConfig 改用新遮罩（不再使用整張地圖圖）
-            float cs = d.Map.MaskCellPixels / (float)d.Map.PixelsPerUnit;
-            var layout = CaveBuild.Generate(d.Cave, cs, d.Fish.PatrolDistance);
-            var mask = CaveBuild.WriteMask(layout, d.Map.MaskCellPixels);
-            Wire(d.Map, ("_collisionMask", mask), ("_mapTexture", null));
-            EditorUtility.SetDirty(d.Map);
+            MapBuilder.Build(d.Map, s_groundLayer, s_square);
+            BuildContent(d);
 
-            var mapBounds = MapBuilder.Build(d.Map, s_groundLayer, s_square);
-            BuildContent(d, layout, cs);
-
-            var spawn = CaveBuild.Feet(layout.Start, cs) + new Vector2(0f, 0.8f);
+            var spawn = PrototypeMapLayout.Local(0, 3, 3f, 1.3f);
             var player = BuildPlayer(d, harpoonPrefab, spawn);
 
             var camGo = new GameObject("Main Camera") { tag = "MainCamera" };
@@ -276,7 +272,7 @@ namespace DrownedDream.EditorTools
             cam.backgroundColor = new Color(0.01f, 0.02f, 0.04f);
             camGo.AddComponent<AudioListener>();
             var gameCamera = camGo.AddComponent<GameCamera>();
-            Wire(gameCamera, ("_target", player), ("_mapBounds", mapBounds));
+            Wire(gameCamera, ("_target", player));
 
             var canvasGo = new GameObject("Canvas");
             var canvas = canvasGo.AddComponent<Canvas>();
@@ -326,34 +322,54 @@ namespace DrownedDream.EditorTools
             return AssetDatabase.LoadAssetAtPath<AudioClip>(path);
         }
 
-        /// <summary>依洞窟生成結果擺放存檔點、道具、敵人、幻覺、Boss 廳（SD-03）。敵人一律站在地面上。</summary>
-        private static void BuildContent(DataSet d, CaveLayout layout, float cs)
+        /// <summary>
+        /// 各區塊內容（局部座標，單位；地板頂端 y = 0.5）。
+        /// 路線：上排 左→右 → 第 2 排 右→左 → 第 1 排 左→右 → 下排 右→左（Boss）。
+        /// </summary>
+        private static void BuildContent(DataSet d)
         {
             var root = new GameObject("Content").transform;
-            const float itemLift = 0.6f; // 道具 / 存檔點中心離地高度
-            int hallStage = 0;
+            const float floorItemY = 1.1f;   // 地板上的道具高度
+            const float lowPlatY = 3.6f;      // 低平台（頂 3.0）上的道具高度
+            const float highPlatY = 5.6f;     // 高平台（頂 5.0）上的道具高度
 
-            foreach (var (thing, cell) in layout.Things)
-            {
-                var feet = CaveBuild.Feet(cell, cs);
-                switch (thing)
-                {
-                    case CaveThing.Checkpoint: MakeCheckpoint(root, feet + Vector2.up * itemLift); break;
-                    case CaveThing.Seal: MakePickup(root, d.Seal, feet + Vector2.up * itemLift); break;
-                    case CaveThing.Pill: MakePickup(root, d.Pill, feet + Vector2.up * itemLift); break;
-                    case CaveThing.Medkit: MakePickup(root, d.Medkit, feet + Vector2.up * itemLift); break;
-                    case CaveThing.Fish: MakeEnemy(root, d.Fish, feet); break;
-                    case CaveThing.Tentacle: MakeEnemy(root, d.Tentacle, feet); break;
-                    case CaveThing.Eye: MakeEnemy(root, d.Eye, feet); break;
-                    case CaveThing.Hallucination: MakeHallucination(root, feet + Vector2.up * 2f, 1 + (hallStage++ % 2)); break;
-                }
-            }
+            // 第 3 排（起點）
+            MakeCheckpoint(root, PrototypeMapLayout.Local(0, 3, 5f, floorItemY));
+            MakePickup(root, d.Pill, PrototypeMapLayout.Local(0, 3, 11f, highPlatY));
+            MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(1, 3, 8f, 3f));
+            MakeEnemy(root, d.Eye, PrototypeMapLayout.Local(2, 3, 12f, 11f));
+            MakePickup(root, d.Seal, PrototypeMapLayout.Local(2, 3, 11f, highPlatY));
+            MakeHallucination(root, PrototypeMapLayout.Local(2, 3, 6f, 12f), 1);
+            MakePickup(root, d.Medkit, PrototypeMapLayout.Local(3, 3, 12f, floorItemY));
 
-            var bossRoom = CaveBuild.ToWorld(layout.BossRoom, cs);
-            var boss = MakeBoss(root, CaveBuild.Feet(layout.Boss, cs));
-            MakeAltar(root, boss, CaveBuild.Feet(layout.Altar, cs) + Vector2.up * 0.5f);
-            MakeBossArea(root, boss, bossRoom);
-            MakeBreathGate(root, CaveBuild.ToWorld(layout.Gate, cs));
+            // 第 2 排（右 → 左）
+            MakeEnemy(root, d.Tentacle, PrototypeMapLayout.Local(3, 2, 14.5f, 1.5f));
+            MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(2, 2, 8f, 3f));
+            MakePickup(root, d.Pill, PrototypeMapLayout.Local(2, 2, 11f, highPlatY));
+            MakePickup(root, d.Medkit, PrototypeMapLayout.Local(1, 2, 6f, lowPlatY));
+            MakeEnemy(root, d.Eye, PrototypeMapLayout.Local(1, 2, 3f, 11f));
+            MakeHallucination(root, PrototypeMapLayout.Local(1, 2, 9f, 12f), 2);
+            MakeCheckpoint(root, PrototypeMapLayout.Local(0, 2, 12f, floorItemY));
+
+            // 第 1 排（左 → 右），(0,1) 有憋氣屏障擋住往右的路
+            MakeBreathGate(root, PrototypeMapLayout.Local(0, 1, 14f, 0.5f), new Vector2(0.5f, 15f));
+            MakePickup(root, d.Seal, PrototypeMapLayout.Local(1, 1, 8f, floorItemY));
+            MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(1, 1, 10f, 3f));
+            MakeEnemy(root, d.Eye, PrototypeMapLayout.Local(2, 1, 8f, 11f));
+            MakePickup(root, d.Medkit, PrototypeMapLayout.Local(2, 1, 11f, highPlatY));
+            MakeCheckpoint(root, PrototypeMapLayout.Local(3, 1, 4.5f, floorItemY));
+
+            // 第 0 排（右 → 左），終點 Boss
+            MakePickup(root, d.Seal, PrototypeMapLayout.Local(3, 0, 1.5f, floorItemY));
+            MakeEnemy(root, d.Tentacle, PrototypeMapLayout.Local(3, 0, 3.5f, 1.5f));
+            MakeEnemy(root, d.Fish, PrototypeMapLayout.Local(2, 0, 8f, 3f));
+            MakePickup(root, d.Pill, PrototypeMapLayout.Local(2, 0, 11f, highPlatY));
+            MakeCheckpoint(root, PrototypeMapLayout.Local(1, 0, 12f, floorItemY));
+            MakePickup(root, d.Medkit, PrototypeMapLayout.Local(1, 0, 6f, lowPlatY));
+
+            var boss = MakeBoss(root, PrototypeMapLayout.Local(0, 0, 4f, 9f));
+            MakeAltar(root, boss, PrototypeMapLayout.Local(0, 0, 10f, 1f));
+            MakeBossArea(root, boss, PrototypeMapLayout.Local(0, 0, 8f, 8f));
         }
 
         /// <summary>建立玩家與所有玩家元件。</summary>
@@ -387,7 +403,7 @@ namespace DrownedDream.EditorTools
 
             Wire(go.GetComponent<PlayerStatus>(),
                 ("_vitals", d.Vitals), ("_sanityConfig", d.Sanity), ("_movement", d.Movement), ("_harpoon", d.Harpoon),
-                ("_requiredSeals", d.Cave.Seals), ("_flashRenderers", renderers));
+                ("_requiredSeals", 3), ("_flashRenderers", renderers));
             Wire(go.GetComponent<PlayerMove>(), ("_groundMask", Mask(s_groundLayer)), ("_visual", visual));
             Wire(go.GetComponent<PlayerBreath>(), ("_config", d.Breath), ("_fadeRenderers", renderers));
             Wire(go.GetComponent<PlayerAttack>(), ("_harpoonPrefab", harpoonPrefab));
@@ -440,12 +456,12 @@ namespace DrownedDream.EditorTools
             return prefab;
         }
 
-        /// <summary>建立一般敵人（feet = 地面位置；碰撞框底部貼地，與玩家同一高度帶）。</summary>
-        private static void MakeEnemy(Transform parent, EnemyData data, Vector2 feet)
+        /// <summary>建立一般敵人。</summary>
+        private static void MakeEnemy(Transform parent, EnemyData data, Vector2 pos)
         {
             var go = new GameObject($"Enemy_{data.name}") { layer = s_enemyLayer };
             go.transform.SetParent(parent);
-            go.transform.position = feet + Vector2.up * (data.Size.y / 2f);
+            go.transform.position = pos;
             var body = go.AddComponent<Rigidbody2D>();
             body.bodyType = RigidbodyType2D.Kinematic;
             var col = go.AddComponent<BoxCollider2D>();
@@ -460,12 +476,12 @@ namespace DrownedDream.EditorTools
             Wire(ai, ("_renderer", sr));
         }
 
-        /// <summary>建立 Boss（feet = 地面位置；Boss 站在 Boss 廳地板上）。</summary>
-        private static BossController MakeBoss(Transform parent, Vector2 feet)
+        /// <summary>建立 Boss。</summary>
+        private static BossController MakeBoss(Transform parent, Vector2 pos)
         {
             var go = new GameObject("Boss") { layer = s_enemyLayer };
             go.transform.SetParent(parent);
-            go.transform.position = feet + Vector2.up * 3f; // 碰撞框高 6
+            go.transform.position = pos;
             var col = go.AddComponent<BoxCollider2D>();
             col.size = new Vector2(4f, 6f);
             col.isTrigger = true;
@@ -489,44 +505,25 @@ namespace DrownedDream.EditorTools
             Wire(altar, ("_boss", boss));
         }
 
-        /// <summary>建立 Boss 廳 area（觸發框涵蓋整個 Boss 廳）。</summary>
-        private static void MakeBossArea(Transform parent, BossController boss, Rect room)
+        /// <summary>建立 Boss 房 area（放在 Boss 房內任一點即可）。</summary>
+        private static void MakeBossArea(Transform parent, BossController boss, Vector2 pos)
         {
-            var go = new GameObject("BossArea") { layer = 2 }; // Ignore Raycast
+            var go = new GameObject("BossArea");
             go.transform.SetParent(parent);
-            go.transform.position = room.center;
-            var box = go.AddComponent<BoxCollider2D>();
-            box.isTrigger = true;
-            box.size = room.size;
+            go.transform.position = pos;
             var area = go.AddComponent<BossArea>();
             Wire(area, ("_boss", boss));
         }
 
-        /// <summary>建立憋氣屏障（Boss 廳入口隧道；外觀為水流，憋氣才能穿過，F-BRE-05）。</summary>
-        private static void MakeBreathGate(Transform parent, Rect rect)
+        /// <summary>建立憋氣屏障（左下角位置 + 尺寸）。</summary>
+        private static void MakeBreathGate(Transform parent, Vector2 bottomLeft, Vector2 size)
         {
             var go = new GameObject("BreathGate") { layer = s_groundLayer };
             go.transform.SetParent(parent);
-            go.transform.position = rect.center;
-            var col = go.AddComponent<BoxCollider2D>();
-            col.size = rect.size;
-
-            // 水流圖：高度貼齊隧道、寬度依比例；沒有圖就用方塊
-            ConfigureSprite(WaterfallPath, 100, SpriteAlignment.Center);
-            var waterfall = AssetDatabase.LoadAssetAtPath<Sprite>(WaterfallPath);
-            var visual = Child(go.transform, "Visual", Vector2.zero);
-            SpriteRenderer sr;
-            if (waterfall != null)
-            {
-                sr = MakeSprite(visual.gameObject, waterfall, Color.white, 4);
-                float scale = rect.height / waterfall.bounds.size.y;
-                visual.localScale = new Vector3(scale, scale, 1f);
-            }
-            else
-            {
-                sr = MakeSprite(visual.gameObject, s_square, new Color(0.45f, 0.9f, 0.6f), 4);
-                visual.localScale = new Vector3(rect.width, rect.height, 1f);
-            }
+            go.transform.position = bottomLeft + size / 2f;
+            go.transform.localScale = new Vector3(size.x, size.y, 1f);
+            var sr = MakeSprite(go, s_square, new Color(0.45f, 0.9f, 0.6f), 4);
+            go.AddComponent<BoxCollider2D>();
             var gate = go.AddComponent<BreathGate>();
             Wire(gate, ("_renderer", sr));
         }

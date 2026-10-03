@@ -8,7 +8,7 @@ using UnityEngine.Tilemaps;
 namespace DrownedDream.EditorTools
 {
     /// <summary>
-    /// 由 MapConfig 產生地圖：碰撞 Tilemap（由遮罩圖取樣）+ 地形 / 背景牆自動貼圖（Tilemap）+ 遠景；沒有地形素材時才畫整張地圖圖。
+    /// 由 MapConfig 產生地圖：背景 Sprite + 碰撞 Tilemap（由遮罩圖取樣）+ 地形自動貼圖 + 4×4 Room 邊界。
     /// 美術更新地圖 / 遮罩後，用選單 Drowned Dream/Rebuild Map 只重建地圖，不動其他物件。
     /// </summary>
     internal static class MapBuilder
@@ -27,10 +27,6 @@ namespace DrownedDream.EditorTools
         private static readonly string[] TerrainNames = { "tl", "tc", "tr", "ml", "mc", "mr", "bl", "bc", "br" };
         /// <summary>地形圖塊略放大，蓋掉相鄰圖塊間的細縫。</summary>
         private const float TerrainOverlap = 1.02f;
-        /// <summary>背景牆 Sorting Order。</summary>
-        private const int BackWallOrder = -8;
-        /// <summary>背景牆裝飾 Sorting Order。</summary>
-        private const int WallDecorOrder = -7;
         /// <summary>地形 Sorting Order。</summary>
         private const int TerrainOrder = -6;
         /// <summary>裝飾 Sorting Order。</summary>
@@ -60,24 +56,20 @@ namespace DrownedDream.EditorTools
             Debug.Log("[DrownedDream] 地圖重建完成");
         }
 
-        /// <summary>產生地圖根物件，回傳地圖世界範圍（左下角 0,0）。</summary>
-        public static Rect Build(MapConfig config, int groundLayer, Sprite tileSprite)
+        /// <summary>產生地圖根物件，回傳 4×4 Room（索引 [col, row]）。</summary>
+        public static Room[,] Build(MapConfig config, int groundLayer, Sprite tileSprite)
         {
             var root = new GameObject(RootName);
             var grid = root.AddComponent<Grid>();
             float cellUnits = config.MaskCellPixels / (float)config.PixelsPerUnit;
             grid.cellSize = new Vector3(cellUnits, cellUnits, 0f);
 
+            BuildFarBackground(config, root.transform);
+            BuildBackground(config, root.transform);
             var solid = SampleSolid(config);
-            // 地圖大小用遮罩格數換算（匯入後的貼圖可能被縮小，不能用貼圖寬高）
-            var size = solid != null ? new Vector2(solid.GetLength(0), solid.GetLength(1)) * cellUnits : MapSizeUnits(config);
-            BuildFarBackground(config, root.transform, size);
-            bool hasTerrain = config.Terrain != null && config.Terrain.GetTerrain(1, 1) != null;
-            if (!hasTerrain) BuildBackground(config, root.transform); // 有地形素材時不畫整張地圖圖
             BuildCollision(root.transform, groundLayer, tileSprite, solid);
             BuildTerrain(config, root.transform, solid);
-            BuildBackWall(config, root.transform, solid);
-            return new Rect(Vector2.zero, size);
+            return BuildRooms(config, root.transform);
         }
 
         /// <summary>地圖圖片設為 Sprite（左下角對齊原點）並放到背景。</summary>
@@ -94,7 +86,7 @@ namespace DrownedDream.EditorTools
         }
 
         /// <summary>遠景背景：不受光、排在最後面、視差跟隨攝影機（F-MAP-09）。</summary>
-        private static void BuildFarBackground(MapConfig config, Transform root, Vector2 size)
+        private static void BuildFarBackground(MapConfig config, Transform root)
         {
             if (config.FarBackground == null) return;
             string path = AssetDatabase.GetAssetPath(config.FarBackground);
@@ -103,6 +95,7 @@ namespace DrownedDream.EditorTools
 
             var go = new GameObject("FarBackground");
             go.transform.SetParent(root, false);
+            var size = MapSizeUnits(config);
             go.transform.position = new Vector3(size.x / 2f, size.y / 2f, 0f);
             var sr = EditorBuildUtil.MakeSprite(go, sprite, Color.white, -100);
             var unlit = AssetDatabase.LoadAssetAtPath<Material>(EditorBuildUtil.SpriteUnlitMaterialPath);
@@ -172,11 +165,7 @@ namespace DrownedDream.EditorTools
         /// <summary>MapConfig 沒有地形素材時，用預設切片建立 TerrainTileSet 並綁上（已有則不動）。</summary>
         public static void EnsureTerrainSet(MapConfig config)
         {
-            if (config.Terrain != null)
-            {
-                FillBackWall(config.Terrain);
-                return;
-            }
+            if (config.Terrain != null) return;
             string first = $"{TerrainArtDir}/terrain_{TerrainNames[0]}.png";
             if (!File.Exists(first)) return; // 沒有地形素材就維持只顯示地圖圖
 
@@ -190,23 +179,8 @@ namespace DrownedDream.EditorTools
                     ("_leftDecor", new[] { LoadSprite($"{TerrainArtDir}/decor_side_left.png") }),
                     ("_rightDecor", new[] { LoadSprite($"{TerrainArtDir}/decor_side_right.png") }));
             });
-            FillBackWall(set);
             EditorBuildUtil.Wire(config, ("_terrain", set));
             EditorUtility.SetDirty(config);
-        }
-
-        /// <summary>背景牆 / 牆面裝飾欄位是空的就補上預設切片（舊資產升級用，不覆蓋已設定的值）。</summary>
-        private static void FillBackWall(TerrainTileSet set)
-        {
-            if (set.GetBackWall(1, 1) != null) return;
-            string first = $"{TerrainArtDir}/backwall_{TerrainNames[0]}.png";
-            if (!File.Exists(first)) return;
-            var wall = new Sprite[TerrainNames.Length];
-            for (int i = 0; i < wall.Length; i++) wall[i] = LoadSprite($"{TerrainArtDir}/backwall_{TerrainNames[i]}.png");
-            EditorBuildUtil.Wire(set,
-                ("_backWall", wall),
-                ("_wallDecor", new[] { LoadSprite($"{TerrainArtDir}/decor_wall_crack.png") }));
-            EditorUtility.SetDirty(set);
         }
 
         /// <summary>依實心格四鄰貼 3×3 地形圖塊，並在天花板 / 牆面放裝飾。</summary>
@@ -303,59 +277,6 @@ namespace DrownedDream.EditorTools
             decorMap.SetTiles(decorPos.ToArray(), decorList.ToArray());
         }
 
-        /// <summary>
-        /// 洞穴空間後方鋪背景牆（F-MAP-10）：每個空格依上下左右是否貼著牆挑 3×3 圖塊
-        /// （上方是牆 → 上排陰影），再隨機放牆面裂紋。
-        /// </summary>
-        private static void BuildBackWall(MapConfig config, Transform root, bool[,] solid)
-        {
-            var set = config.Terrain;
-            if (set == null || solid == null || set.GetBackWall(1, 1) == null) return;
-
-            float cellUnits = config.MaskCellPixels / (float)config.PixelsPerUnit;
-            float ppu = set.GetBackWall(1, 1).texture.width / cellUnits;
-            int w = solid.GetLength(0);
-            int h = solid.GetLength(1);
-            bool Solid(int x, int y) => x < 0 || y < 0 || x >= w || y >= h || solid[x, y];
-
-            var tiles = new Tile[9];
-            for (int i = 0; i < 9; i++)
-            {
-                tiles[i] = MakeTile($"BackWall_{TerrainNames[i]}", set.GetBackWall(i / 3, i % 3), ppu, SpriteAlignment.Center,
-                    Matrix4x4.Scale(new Vector3(TerrainOverlap, TerrainOverlap, 1f)));
-                tiles[i].color = set.BackWallColor;
-                tiles[i].flags = TileFlags.LockAll;
-                EditorUtility.SetDirty(tiles[i]);
-            }
-            var decor = MakeDecorTiles("WallDecor", set.WallDecor, ppu, SpriteAlignment.Center,
-                Matrix4x4.Scale(new Vector3(set.DecorScale, set.DecorScale, 1f)));
-
-            var pos = new List<Vector3Int>();
-            var list = new List<TileBase>();
-            var decorPos = new List<Vector3Int>();
-            var decorList = new List<TileBase>();
-            for (int y = 0; y < h; y++)
-            {
-                for (int x = 0; x < w; x++)
-                {
-                    if (solid[x, y]) continue;
-                    int row = Solid(x, y + 1) ? 0 : Solid(x, y - 1) ? 2 : 1;
-                    int col = Solid(x - 1, y) ? 0 : Solid(x + 1, y) ? 2 : 1;
-                    pos.Add(new Vector3Int(x, y, 0));
-                    list.Add(tiles[row * 3 + col]);
-                    // 裂紋只放在離牆有點距離的空格，避免被地形蓋住
-                    if (decor.Length > 0 && row == 1 && col == 1 && !Solid(x, y + 2) && !Solid(x, y - 2)
-                        && Hash(x, y, set.Seed, 7) < set.WallDecorChance)
-                    {
-                        decorPos.Add(new Vector3Int(x, y, 0));
-                        decorList.Add(decor[(int)(Hash(x, y, set.Seed, 8) * decor.Length) % decor.Length]);
-                    }
-                }
-            }
-            MakeTilemap(root, "BackWall", BackWallOrder).SetTiles(pos.ToArray(), list.ToArray());
-            if (decorPos.Count > 0) MakeTilemap(root, "WallDecor", WallDecorOrder).SetTiles(decorPos.ToArray(), decorList.ToArray());
-        }
-
         /// <summary>建立只顯示用的 Tilemap（受光材質、指定排序）。</summary>
         private static Tilemap MakeTilemap(Transform root, string name, int order)
         {
@@ -425,6 +346,32 @@ namespace DrownedDream.EditorTools
             if (sprite != null) return sprite;
             EditorBuildUtil.ConfigureSprite(path, 256, SpriteAlignment.Center);
             return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+        }
+
+        /// <summary>依 4×4 切分建立 Room 邊界。</summary>
+        private static Room[,] BuildRooms(MapConfig config, Transform root)
+        {
+            var rooms = new Room[config.Columns, config.Rows];
+            var size = MapSizeUnits(config);
+            float w = size.x / config.Columns;
+            float h = size.y / config.Rows;
+
+            for (int c = 0; c < config.Columns; c++)
+            {
+                for (int r = 0; r < config.Rows; r++)
+                {
+                    var go = new GameObject($"Room_{c}_{r}") { layer = 2 }; // Ignore Raycast
+                    go.transform.SetParent(root, false);
+                    var box = go.AddComponent<BoxCollider2D>();
+                    box.isTrigger = true;
+                    box.offset = new Vector2(c * w + w / 2f, r * h + h / 2f);
+                    box.size = new Vector2(w, h);
+                    var room = go.AddComponent<Room>();
+                    EditorBuildUtil.Wire(room, ("_displayName", $"區塊 {c}-{r}"));
+                    rooms[c, r] = room;
+                }
+            }
+            return rooms;
         }
 
         /// <summary>地圖世界尺寸（以遮罩或地圖圖的像素換算）。</summary>

@@ -28,18 +28,6 @@
 | `decor_ceiling_stalactite.png` | 天花板垂吊鐘乳石 | 同比例縮放 |
 | `decor_side_left.png` / `decor_side_right.png` | 牆面左 / 右側尖刺 | 同比例縮放 |
 
-## 背景素材（2026-10-03）
-
-來源：`ArtSource/background_sheet.png`（同一個切圖腳本處理；素材表上的白色格線會先修掉）。
-
-| 檔案 | 用途 |
-|---|---|
-| `Terrain/backwall_tl..br.png` | 背景牆 3×3：鋪在所有洞穴空格後方，依四周的牆挑圖塊（上方是牆 → 上排深色陰影）；半透明，可在 `TerrainTileSet.BackWallColor` 調 |
-| `Terrain/decor_wall_crack.png` | 背景牆裂紋，隨機出現（`WallDecorChance`） |
-| `Props/prop_waterfall.png` | 水流落入水坑 → **憋氣屏障外觀**（Boss 廳入口；憋氣時變半透明可穿過） |
-
-`[待確認]` 美術確認以上判讀；六個箱子未使用。
-
 ### 請美術補交 / 確認 `[待確認]`
 
 - **PNG 透明背景**、每個零件一張（目前是程式從 JPG 去背，邊緣與深色陰影會有瑕疵）。
