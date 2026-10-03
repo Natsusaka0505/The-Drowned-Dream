@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: SanityConfig
   m_EditorClassIdentifier: Assembly-CSharp::DrownedDream.SanityConfig
   _maxSanity: 100
+  _drainMultiplier: 2
   _recoverPerSecond: 3
   _drainWhileInvisible: 1
   _stageThresholds:

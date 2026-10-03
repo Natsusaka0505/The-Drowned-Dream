@@ -10,6 +10,10 @@ namespace DrownedDream
         [SerializeField] private float _maxSanity = 100f;
         /// <summary>基礎最大 SAN（唯讀）</summary>
         public float MaxSanity => _maxSanity;
+        /// <summary>恐懼範圍掉 SAN 的全域倍率（各怪物的下降速率再乘上此值）</summary>
+        [SerializeField] private float _drainMultiplier = 2f;
+        /// <summary>恐懼範圍掉 SAN 的全域倍率（唯讀）</summary>
+        public float DrainMultiplier => _drainMultiplier;
         /// <summary>離開所有恐懼範圍後每秒恢復量</summary>
         [SerializeField] private float _recoverPerSecond = 3f;
         /// <summary>離開所有恐懼範圍後每秒恢復量（唯讀）</summary>

@@ -39,9 +39,9 @@ namespace DrownedDream
         /// <summary>目前狀態。</summary>
         public BreathState State { get; private set; } = BreathState.Ready;
         /// <summary>憋氣剩餘秒數。</summary>
-        public float HoldRemaining => State == BreathState.Holding ? Mathf.Max(0f, _config.MaxHoldTime - _holdTimer) : 0f;
-        /// <summary>憋氣最大秒數。</summary>
-        public float MaxHoldTime => _config.MaxHoldTime;
+        public float HoldRemaining => State == BreathState.Holding ? Mathf.Max(0f, MaxHoldTime - _holdTimer) : 0f;
+        /// <summary>目前最大憋氣秒數：SAN 越低越短（F-BRE-02），SAN 0 時為基礎值 × MinHoldRatio。</summary>
+        public float MaxHoldTime => _config.MaxHoldTime * Mathf.Lerp(_config.MinHoldRatio, 1f, Mathf.Clamp01((float)_status.SanityRatio));
         /// <summary>本次 CD 總秒數。</summary>
         public float CooldownTotal => _cooldownTotal;
 
@@ -66,7 +66,7 @@ namespace DrownedDream
 
                 case BreathState.Holding:
                     _holdTimer += Time.deltaTime;
-                    if (_input.BreathPressed || _holdTimer >= _config.MaxHoldTime || !_status.IsAlive) EndHold();
+                    if (_input.BreathPressed || _holdTimer >= MaxHoldTime || !_status.IsAlive) EndHold();
                     break;
 
                 case BreathState.Cooldown:
@@ -101,7 +101,7 @@ namespace DrownedDream
         /// <summary>結束憋氣並依比例計算 CD。</summary>
         private void EndHold()
         {
-            float ratio = Mathf.Clamp01(_holdTimer / _config.MaxHoldTime);
+            float ratio = Mathf.Clamp01(_holdTimer / MaxHoldTime);
             _cooldownTotal = _config.Cooldown * Mathf.Max(_config.MinCooldownRatio, ratio);
             _cooldownTimer = _cooldownTotal;
             SetState(BreathState.Cooldown);

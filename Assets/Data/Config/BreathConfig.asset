@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: BreathConfig
   m_EditorClassIdentifier: Assembly-CSharp::DrownedDream.BreathConfig
   _maxHoldTime: 5
+  _minHoldRatio: 0.4
   _cooldown: 8
   _minCooldownRatio: 0.3
   _holdAlpha: 0.35
