@@ -8,7 +8,7 @@ using UnityEngine.Tilemaps;
 namespace DrownedDream.EditorTools
 {
     /// <summary>
-    /// 由 MapConfig 產生地圖：背景 Sprite + 碰撞 Tilemap（由遮罩圖取樣）+ 4×4 Room 邊界。
+    /// 由 MapConfig 產生地圖：背景 Sprite + 碰撞 Tilemap（由遮罩圖取樣）+ 地形自動貼圖 + 4×4 Room 邊界。
     /// 美術更新地圖 / 遮罩後，用選單 Drowned Dream/Rebuild Map 只重建地圖，不動其他物件。
     /// </summary>
     internal static class MapBuilder
@@ -17,6 +17,22 @@ namespace DrownedDream.EditorTools
         public const string RootName = "Map";
         /// <summary>碰撞 Tile 資產路徑。</summary>
         private const string TilePath = "Assets/Data/Map/CollisionTile.asset";
+        /// <summary>地形素材設定資產路徑。</summary>
+        public const string TerrainSetPath = "Assets/Data/Map/TerrainTileSet.asset";
+        /// <summary>地形 / 裝飾 Tile 資產資料夾。</summary>
+        private const string TerrainTileDir = "Assets/Data/Map/Terrain";
+        /// <summary>地形切片 PNG 資料夾。</summary>
+        public const string TerrainArtDir = "Assets/Art/Map/Terrain";
+        /// <summary>3×3 地形檔名後綴（列優先，對應 TerrainTileSet.Terrain 索引）。</summary>
+        private static readonly string[] TerrainNames = { "tl", "tc", "tr", "ml", "mc", "mr", "bl", "bc", "br" };
+        /// <summary>地形圖塊略放大，蓋掉相鄰圖塊間的細縫。</summary>
+        private const float TerrainOverlap = 1.02f;
+        /// <summary>地形 Sorting Order。</summary>
+        private const int TerrainOrder = -6;
+        /// <summary>裝飾 Sorting Order。</summary>
+        private const int DecorOrder = -5;
+        /// <summary>同一排裝飾之間最少間隔格數（避免擠在一起）。</summary>
+        private const int DecorSpacing = 2;
 
         /// <summary>選單：在目前場景重建地圖（保留其他物件）。</summary>
         [MenuItem("Drowned Dream/Rebuild Map")]
@@ -34,6 +50,7 @@ namespace DrownedDream.EditorTools
 
             int ground = EditorBuildUtil.EnsureLayer("Ground", 6);
             var square = EditorBuildUtil.EnsureShapeSprite(PrototypeSceneBuilder.ArtDir, "Square", circle: false);
+            EnsureTerrainSet(config);
             Build(config, ground, square);
             EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
             Debug.Log("[DrownedDream] 地圖重建完成");
@@ -49,7 +66,9 @@ namespace DrownedDream.EditorTools
 
             BuildFarBackground(config, root.transform);
             BuildBackground(config, root.transform);
-            BuildCollision(config, root.transform, groundLayer, tileSprite);
+            var solid = SampleSolid(config);
+            BuildCollision(root.transform, groundLayer, tileSprite, solid);
+            BuildTerrain(config, root.transform, solid);
             return BuildRooms(config, root.transform);
         }
 
@@ -85,8 +104,32 @@ namespace DrownedDream.EditorTools
             EditorBuildUtil.Wire(parallax, ("_mapMin", Vector2.zero), ("_mapSize", size), ("_follow", config.ParallaxFollow));
         }
 
-        /// <summary>讀取遮罩圖，暗色格放碰撞 Tile，合併成 CompositeCollider2D。</summary>
-        private static void BuildCollision(MapConfig config, Transform root, int groundLayer, Sprite tileSprite)
+        /// <summary>讀取遮罩圖，回傳每格是否實心（[x, y]，y = 0 為最下排）；沒有遮罩回傳 null。</summary>
+        private static bool[,] SampleSolid(MapConfig config)
+        {
+            if (config.CollisionMask == null)
+            {
+                Debug.LogError("[DrownedDream] MapConfig 沒有碰撞遮罩圖");
+                return null;
+            }
+
+            var mask = ReadTexture(config.CollisionMask);
+            int cell = config.MaskCellPixels;
+            var solid = new bool[mask.width / cell, mask.height / cell];
+            for (int cy = 0; cy < solid.GetLength(1); cy++)
+            {
+                for (int cx = 0; cx < solid.GetLength(0); cx++)
+                {
+                    var c = mask.GetPixel(cx * cell + cell / 2, cy * cell + cell / 2);
+                    solid[cx, cy] = c.grayscale < config.WallThreshold && c.a > 0.5f;
+                }
+            }
+            Object.DestroyImmediate(mask);
+            return solid;
+        }
+
+        /// <summary>實心格放碰撞 Tile，合併成 CompositeCollider2D。</summary>
+        private static void BuildCollision(Transform root, int groundLayer, Sprite tileSprite, bool[,] solid)
         {
             var go = new GameObject("Collision") { layer = groundLayer };
             go.transform.SetParent(root, false);
@@ -99,34 +142,210 @@ namespace DrownedDream.EditorTools
             tileCollider.compositeOperation = Collider2D.CompositeOperation.Merge;
             var composite = go.AddComponent<CompositeCollider2D>();
             composite.geometryType = CompositeCollider2D.GeometryType.Polygons;
-
-            if (config.CollisionMask == null)
-            {
-                Debug.LogError("[DrownedDream] MapConfig 沒有碰撞遮罩圖");
-                return;
-            }
+            if (solid == null) return;
 
             var tile = EnsureTile(tileSprite);
-            var mask = ReadTexture(config.CollisionMask);
-            int cell = config.MaskCellPixels;
-            int cellsX = mask.width / cell;
-            int cellsY = mask.height / cell;
             var positions = new List<Vector3Int>();
-
-            for (int cy = 0; cy < cellsY; cy++)
+            for (int cy = 0; cy < solid.GetLength(1); cy++)
             {
-                for (int cx = 0; cx < cellsX; cx++)
+                for (int cx = 0; cx < solid.GetLength(0); cx++)
                 {
-                    var c = mask.GetPixel(cx * cell + cell / 2, cy * cell + cell / 2);
-                    if (c.grayscale < config.WallThreshold && c.a > 0.5f) positions.Add(new Vector3Int(cx, cy, 0));
+                    if (solid[cx, cy]) positions.Add(new Vector3Int(cx, cy, 0));
                 }
             }
-            Object.DestroyImmediate(mask);
 
             var tiles = new TileBase[positions.Count];
             for (int i = 0; i < tiles.Length; i++) tiles[i] = tile;
             tilemap.SetTiles(positions.ToArray(), tiles);
             composite.GenerateGeometry();
+        }
+
+        // ───────────────────────── 地形自動貼圖（SD-02 A 方案） ─────────────────────────
+
+        /// <summary>MapConfig 沒有地形素材時，用預設切片建立 TerrainTileSet 並綁上（已有則不動）。</summary>
+        public static void EnsureTerrainSet(MapConfig config)
+        {
+            if (config.Terrain != null) return;
+            string first = $"{TerrainArtDir}/terrain_{TerrainNames[0]}.png";
+            if (!File.Exists(first)) return; // 沒有地形素材就維持只顯示地圖圖
+
+            var set = EditorBuildUtil.Asset<TerrainTileSet>(TerrainSetPath, so =>
+            {
+                var terrain = new Sprite[TerrainNames.Length];
+                for (int i = 0; i < terrain.Length; i++) terrain[i] = LoadSprite($"{TerrainArtDir}/terrain_{TerrainNames[i]}.png");
+                EditorBuildUtil.Set(so,
+                    ("_terrain", terrain),
+                    ("_ceilingDecor", new[] { LoadSprite($"{TerrainArtDir}/decor_ceiling_stalactite.png") }),
+                    ("_leftDecor", new[] { LoadSprite($"{TerrainArtDir}/decor_side_left.png") }),
+                    ("_rightDecor", new[] { LoadSprite($"{TerrainArtDir}/decor_side_right.png") }));
+            });
+            EditorBuildUtil.Wire(config, ("_terrain", set));
+            EditorUtility.SetDirty(config);
+        }
+
+        /// <summary>依實心格四鄰貼 3×3 地形圖塊，並在天花板 / 牆面放裝飾。</summary>
+        private static void BuildTerrain(MapConfig config, Transform root, bool[,] solid)
+        {
+            var set = config.Terrain;
+            if (set == null || solid == null || set.GetTerrain(1, 1) == null) return;
+
+            float cellUnits = config.MaskCellPixels / (float)config.PixelsPerUnit;
+            float ppu = set.GetTerrain(1, 1).texture.width / cellUnits; // 一張地形圖塊 = 一格
+            int w = solid.GetLength(0);
+            int h = solid.GetLength(1);
+            // 地圖外視為實心（邊界不畫邊框）
+            bool Solid(int x, int y) => x < 0 || y < 0 || x >= w || y >= h || solid[x, y];
+
+            // 地形：上方空 → 上排、下方空 → 下排；左方空 → 左欄、右方空 → 右欄
+            var terrainTiles = new Tile[9];
+            for (int i = 0; i < 9; i++)
+            {
+                terrainTiles[i] = MakeTile($"Terrain_{TerrainNames[i]}", set.GetTerrain(i / 3, i % 3), ppu, SpriteAlignment.Center,
+                    Matrix4x4.Scale(new Vector3(TerrainOverlap, TerrainOverlap, 1f)));
+            }
+            var terrainPos = new List<Vector3Int>();
+            var terrainList = new List<TileBase>();
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    if (!solid[x, y]) continue;
+                    int row = !Solid(x, y + 1) ? 0 : !Solid(x, y - 1) ? 2 : 1;
+                    int col = !Solid(x - 1, y) ? 0 : !Solid(x + 1, y) ? 2 : 1;
+                    terrainPos.Add(new Vector3Int(x, y, 0));
+                    terrainList.Add(terrainTiles[row * 3 + col]);
+                }
+            }
+            var terrainMap = MakeTilemap(root, "Terrain", TerrainOrder);
+            terrainMap.SetTiles(terrainPos.ToArray(), terrainList.ToArray());
+
+            // 裝飾：放在實心格旁邊的空格，用位移讓圖貼齊牆面 / 天花板
+            float half = cellUnits / 2f;
+            var scale = new Vector3(set.DecorScale, set.DecorScale, 1f);
+            var ceiling = MakeDecorTiles("Ceiling", set.CeilingDecor, ppu, SpriteAlignment.TopCenter, Matrix4x4.TRS(new Vector3(0f, half, 0f), Quaternion.identity, scale));
+            var left = MakeDecorTiles("Left", set.LeftDecor, ppu, SpriteAlignment.RightCenter, Matrix4x4.TRS(new Vector3(half, 0f, 0f), Quaternion.identity, scale));
+            var right = MakeDecorTiles("Right", set.RightDecor, ppu, SpriteAlignment.LeftCenter, Matrix4x4.TRS(new Vector3(-half, 0f, 0f), Quaternion.identity, scale));
+
+            var decorPos = new List<Vector3Int>();
+            var decorList = new List<TileBase>();
+            void Place(int x, int y, Tile[] pool, int salt)
+            {
+                decorPos.Add(new Vector3Int(x, y, 0));
+                decorList.Add(pool[(int)(Hash(x, y, set.Seed, salt + 100) * pool.Length) % pool.Length]);
+            }
+
+            // 天花板：空格上方是實心、且左右上方也是實心（不放在轉角），同一排保持間隔
+            if (ceiling.Length > 0)
+            {
+                for (int y = 0; y < h; y++)
+                {
+                    int last = int.MinValue;
+                    for (int x = 0; x < w; x++)
+                    {
+                        if (solid[x, y] || !Solid(x, y + 1) || !Solid(x - 1, y + 1) || !Solid(x + 1, y + 1)) continue;
+                        if (x - last < DecorSpacing || Hash(x, y, set.Seed, 1) >= set.CeilingChance) continue;
+                        Place(x, y, ceiling, 1);
+                        last = x;
+                    }
+                }
+            }
+
+            // 牆面：空格旁是實心牆（上下也是牆，避免放在薄平台邊），同一欄保持間隔
+            for (int x = 0; x < w; x++)
+            {
+                int lastL = int.MinValue, lastR = int.MinValue;
+                for (int y = 0; y < h; y++)
+                {
+                    if (solid[x, y]) continue;
+                    // 右邊是牆 → 牆面朝左，裝飾往左突出
+                    if (left.Length > 0 && Solid(x + 1, y) && Solid(x + 1, y + 1) && Solid(x + 1, y - 1)
+                        && y - lastL >= DecorSpacing && Hash(x, y, set.Seed, 2) < set.SideChance)
+                    {
+                        Place(x, y, left, 2);
+                        lastL = y;
+                    }
+                    // 左邊是牆 → 牆面朝右，裝飾往右突出
+                    else if (right.Length > 0 && Solid(x - 1, y) && Solid(x - 1, y + 1) && Solid(x - 1, y - 1)
+                        && y - lastR >= DecorSpacing && Hash(x, y, set.Seed, 3) < set.SideChance)
+                    {
+                        Place(x, y, right, 3);
+                        lastR = y;
+                    }
+                }
+            }
+            var decorMap = MakeTilemap(root, "Decor", DecorOrder);
+            decorMap.SetTiles(decorPos.ToArray(), decorList.ToArray());
+        }
+
+        /// <summary>建立只顯示用的 Tilemap（受光材質、指定排序）。</summary>
+        private static Tilemap MakeTilemap(Transform root, string name, int order)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(root, false);
+            var tilemap = go.AddComponent<Tilemap>();
+            var renderer = go.AddComponent<TilemapRenderer>();
+            renderer.sortingOrder = order;
+            renderer.mode = TilemapRenderer.Mode.Chunk;
+            var mat = AssetDatabase.LoadAssetAtPath<Material>(EditorBuildUtil.SpriteLitMaterialPath);
+            if (mat != null) renderer.sharedMaterial = mat;
+            return tilemap;
+        }
+
+        /// <summary>為一組裝飾 Sprite 建立 Tile（略過空的欄位）。</summary>
+        private static Tile[] MakeDecorTiles(string prefix, Sprite[] sprites, float ppu, SpriteAlignment pivot, Matrix4x4 transform)
+        {
+            var list = new List<Tile>();
+            if (sprites == null) return list.ToArray();
+            for (int i = 0; i < sprites.Length; i++)
+            {
+                if (sprites[i] != null) list.Add(MakeTile($"{prefix}_{i}", sprites[i], ppu, pivot, transform));
+            }
+            return list.ToArray();
+        }
+
+        /// <summary>設定 Sprite 匯入（PPU、pivot）並建立 / 更新對應的 Tile 資產（無碰撞）。</summary>
+        private static Tile MakeTile(string name, Sprite sprite, float ppu, SpriteAlignment pivot, Matrix4x4 transform)
+        {
+            string spritePath = AssetDatabase.GetAssetPath(sprite);
+            EditorBuildUtil.ConfigureSprite(spritePath, Mathf.RoundToInt(ppu), pivot);
+            sprite = AssetDatabase.LoadAssetAtPath<Sprite>(spritePath); // 重新匯入後取最新的 Sprite
+
+            string path = $"{TerrainTileDir}/{name}.asset";
+            var tile = AssetDatabase.LoadAssetAtPath<Tile>(path);
+            if (tile == null)
+            {
+                EditorBuildUtil.EnsureFolder(TerrainTileDir);
+                tile = ScriptableObject.CreateInstance<Tile>();
+                AssetDatabase.CreateAsset(tile, path);
+            }
+            tile.sprite = sprite;
+            tile.colliderType = Tile.ColliderType.None;
+            tile.flags = TileFlags.LockAll;
+            tile.transform = transform;
+            EditorUtility.SetDirty(tile);
+            return tile;
+        }
+
+        /// <summary>依格座標 + 種子產生 0~1 的固定亂數（每次重建結果相同）。</summary>
+        private static float Hash(int x, int y, int seed, int salt)
+        {
+            unchecked
+            {
+                uint h = (uint)(x * 73856093 ^ y * 19349663 ^ seed * 83492791 ^ salt * 2654435761u);
+                h ^= h >> 13;
+                h *= 0x5bd1e995;
+                h ^= h >> 15;
+                return (h & 0xFFFFFF) / (float)0x1000000;
+            }
+        }
+
+        /// <summary>載入 PNG 的 Sprite（尚未設成 Sprite 時先設定匯入）。</summary>
+        private static Sprite LoadSprite(string path)
+        {
+            var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            if (sprite != null) return sprite;
+            EditorBuildUtil.ConfigureSprite(path, 256, SpriteAlignment.Center);
+            return AssetDatabase.LoadAssetAtPath<Sprite>(path);
         }
 
         /// <summary>依 4×4 切分建立 Room 邊界。</summary>

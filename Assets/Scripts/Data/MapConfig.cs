@@ -16,6 +16,11 @@ namespace DrownedDream
         /// <summary>碰撞遮罩圖（同尺寸；黑色 = 牆 / 地板）（唯讀）</summary>
         public Texture2D CollisionMask => _collisionMask;
 
+        /// <summary>地形自動貼圖素材（留空 = 不貼地形，只顯示地圖美術圖）</summary>
+        [SerializeField] private TerrainTileSet _terrain;
+        /// <summary>地形自動貼圖素材（唯讀）</summary>
+        public TerrainTileSet Terrain => _terrain;
+
         /// <summary>遠景背景圖（不碰撞，視差捲動）</summary>
         [SerializeField] private Texture2D _farBackground;
         /// <summary>遠景背景圖（不碰撞，視差捲動）（唯讀）</summary>

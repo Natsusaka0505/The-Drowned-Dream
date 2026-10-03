@@ -23,6 +23,8 @@
 
 **結論：碰撞用 Tilemap（由遮罩圖自動產生），美術用整張 Sprite。** 原型已依此實作（`Editor/MapBuilder.cs`）。
 
+> **2026-10-03 更新**：美術交付了地板素材表（3×3 石板 + 裝飾），改為 **A 方案：依遮罩自動貼地形圖塊**（見下方「地形自動貼圖」）。整張 `map.png` 仍可選用（疊在地形下方），但不再必要。
+
 ### 碰撞 Tile 大小的取捨
 
 | 取樣格 | 碰撞格數 | 精細度 | 備註 |
@@ -60,14 +62,50 @@
 - 使用不受光材質（保留原圖顏色），Sorting Order −100；地圖圖 −10。
 - 匯入設定：最大 4096、壓縮（原圖 4299 寬會略縮）。
 
+## 地形自動貼圖（A 方案，2026-10-03）
+
+美術只要畫**遮罩圖**，地形外觀由程式依遮罩自動拼出。
+
+### 規則
+
+| 項目 | 規則 |
+|---|---|
+| 格子 | 與碰撞格相同（`MaskCellPixels` = 16 px = 0.5 單位），外觀與碰撞完全對齊 |
+| 地形圖塊 | 3×3：角 / 邊 / 中心。每個實心格看上下左右四鄰：上方空 → 上排、下方空 → 下排、其餘 → 中排；左右同理決定欄 |
+| 細條（上下都空） | 取上排（頂面優先） |
+| 地圖外 | 視為實心（地圖邊界不畫邊框） |
+| 天花板裝飾 | 實心格下方是空格 → 依機率在空格掛鐘乳石（頂端貼齊天花板） |
+| 側面裝飾 | 實心格左 / 右是空格 → 依機率在空格放尖刺（貼齊牆面） |
+| 地板頂面裝飾 | 尚無對應素材 `[待確認]` |
+| 隨機 | 以 `TerrainTileSet.Seed` + 格座標雜湊，每次重建結果相同 |
+
+### 資料
+
+- `TerrainTileSet`（`Assets/Data/Map/TerrainTileSet.asset`）：9 張地形 Sprite、裝飾 Sprite 清單、裝飾機率、裝飾縮放、亂數種子。企劃可在 Inspector 調。
+- `MapConfig.Terrain` 指向 `TerrainTileSet`；留空則不貼地形（回到只顯示 `map.png`）。
+- 圖塊 Tile 資產由產生器建立在 `Assets/Data/Map/Terrain/`（每次重建同步 Sprite）。
+
+### 圖層（Sorting Order）
+
+| 圖層 | Order |
+|---|---|
+| 遠景 | −100 |
+| 地圖圖 `map.png`（選用） | −10 |
+| 地形 | −6 |
+| 裝飾 | −5 |
+
+地形 / 裝飾使用受光材質，會被 Global Light 與 SAN 畫面效果影響。
+
 ## 實作流程
 
 ```
 MapConfig（地圖圖、遮罩圖、4×4、PPU 32、取樣 16px）
    │
    ├─ 地圖圖 → Sprite（左下角對齊原點）→ Map/Background
-   ├─ 遮罩圖 → 每格取樣 → Tilemap(Collision, Layer=Ground)
-   │                         └ TilemapCollider2D + CompositeCollider2D
+   ├─ 遮罩圖 → 每格取樣 → 實心格表
+   │     ├─ Tilemap(Collision, Layer=Ground) └ TilemapCollider2D + CompositeCollider2D
+   │     ├─ Tilemap(Terrain)：依四鄰挑 3×3 圖塊
+   │     └─ Tilemap(Decor)：天花板 / 側面裝飾
    └─ 4×4 → Map/Room_c_r（Trigger，攝影機邊界、Boss 房判定）
 ```
 

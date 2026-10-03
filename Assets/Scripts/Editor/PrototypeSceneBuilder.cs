@@ -147,6 +147,7 @@ namespace DrownedDream.EditorTools
                 if (d.Map.CollisionMask == null) Wire(d.Map, ("_collisionMask", AssetDatabase.LoadAssetAtPath<Texture2D>(PrototypeMapLayout.MaskPath)));
                 EditorUtility.SetDirty(d.Map);
             }
+            MapBuilder.EnsureTerrainSet(d.Map); // 舊的 MapConfig 沒有地形素材時補上預設切片
             if (d.Map.FarBackground == null)
             {
                 // 舊的 MapConfig 沒有遠景欄位時補上（不覆蓋企劃已設定的值）
