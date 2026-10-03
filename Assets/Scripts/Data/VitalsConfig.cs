@@ -30,9 +30,9 @@ namespace DrownedDream
         public bool EnemyHitIsLethal => _enemyHitIsLethal;
 
         [Header("氧氣")]
-        /// <summary>氧氣上限（洞窟內沒有任何補氧方式，只有復活時回滿）</summary>
+        /// <summary>氧氣上限</summary>
         [SerializeField] private float _maxOxygen = 100f;
-        /// <summary>氧氣上限（洞窟內沒有任何補氧方式，只有復活時回滿）（唯讀）</summary>
+        /// <summary>氧氣上限（唯讀）</summary>
         public float MaxOxygen => _maxOxygen;
         /// <summary>[待確認] SAN 0 時氧氣上限剩基礎上限的比例（依 SAN 百分比線性，F-OXY-06）</summary>
         [Range(0f, 1f)] [SerializeField] private float _minOxygenRatio = 0.5f;
@@ -42,6 +42,10 @@ namespace DrownedDream
         [SerializeField] private float _oxygenDrainPerSecond = 1f;
         /// <summary>憋氣時每秒消耗氧氣（唯讀）</summary>
         public float OxygenDrainPerSecond => _oxygenDrainPerSecond;
+        /// <summary>憋氣 CD 結束後，氧氣從 0 回滿到上限所需秒數（0 = 不回復）</summary>
+        [SerializeField] private float _oxygenRefillSeconds = 6f;
+        /// <summary>氧氣回滿秒數（唯讀）</summary>
+        public float OxygenRefillSeconds => _oxygenRefillSeconds;
         /// <summary>氧氣歸零時每秒扣 HP（不論是否憋氣）</summary>
         [SerializeField] private float _hpDrainWhenNoOxygen = 20f;
         /// <summary>氧氣歸零時每秒扣 HP（唯讀）</summary>

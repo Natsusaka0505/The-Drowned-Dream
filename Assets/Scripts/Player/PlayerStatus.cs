@@ -50,6 +50,8 @@ namespace DrownedDream
         /// <summary>目前 SAN 分段（變動時才發事件）。</summary>
         private int _sanityStage;
 
+        /// <summary>氧氣是否已回滿（可以潛行的條件）。</summary>
+        public bool IsOxygenFull => Oxygen >= OxygenMax - 0.01d;
         /// <summary>氧氣上限：SAN 越低越低（F-OXY-06），SAN 0 時為基礎上限 × MinOxygenRatio。</summary>
         public double OxygenMax => _vitals.MaxOxygen * (_vitals.MinOxygenRatio + (1d - _vitals.MinOxygenRatio) * Math.Clamp(SanityRatio, 0d, 1d));
         /// <summary>HP 上限。</summary>
@@ -190,15 +192,22 @@ namespace DrownedDream
             SetFlashVisible(_invincibleTimer <= 0d || Mathf.Repeat((float)_invincibleTimer, 0.15f) > 0.075f);
         }
 
-        /// <summary>只有憋氣時耗氧（F-OXY-02）；氧氣歸零時不論是否憋氣都扣 HP（F-OXY-05，不觸發無敵）。</summary>
+        /// <summary>
+        /// 只有憋氣時耗氧（F-OXY-02）；憋氣 CD 結束後氧氣漸漸回滿（F-OXY-03）；
+        /// 氧氣歸零時扣 HP（F-OXY-05，不觸發無敵）。
+        /// </summary>
         private void UpdateOxygen(double dt)
         {
-            if (Oxygen <= 0d)
+            if (IsHoldingBreath)
             {
-                SetHp(Hp - _vitals.HpDrainWhenNoOxygen * dt);
-                return;
+                SetOxygen(Oxygen - _vitals.OxygenDrainPerSecond * dt);
             }
-            if (IsHoldingBreath) SetOxygen(Oxygen - _vitals.OxygenDrainPerSecond * dt);
+            else if (BreathCooldown <= 0d && _vitals.OxygenRefillSeconds > 0f && Oxygen < OxygenMax)
+            {
+                SetOxygen(Oxygen + OxygenMax / _vitals.OxygenRefillSeconds * dt);
+            }
+
+            if (Oxygen <= 0d) SetHp(Hp - _vitals.HpDrainWhenNoOxygen * dt);
         }
 
         /// <summary>恐懼範圍內掉 SAN，離開後恢復。</summary>

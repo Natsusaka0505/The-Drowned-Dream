@@ -36,7 +36,11 @@
 
 | 素材 | 備註 |
 |---|---|
-| HP / 氧氣 / SAN / 憋氣條 | 目前為純色條，可替換 |
+| HP / SAN 框與填充條 | 2026-10-04 已交付：`Assets/Art/UI/HUD/hud_{hp,san}_{frame,fill}.png`（原檔 `hp框`、`框san`、`hp`、`hp san oxygen` 縮為一半） |
+| 氧氣泡泡 ×10 | 2026-10-04 已交付：`Assets/Art/UI/HUD/hud_bubble_01~10.png`（原檔 `泡泡1~10`） |
+| 玩家頭像 + 頭相框 | 2026-10-04：框 `Assets/Art/UI/HUD/hud_portrait_frame.png`（原檔 `頭相框`）；頭像 `hud_portrait.png` 暫時從封面裁主角臉，`[待確認]` 美術交正式頭像 |
+| 名字框 | 已收到原檔（`圖片暫存/`），尚未使用 |
+| 憋氣條 | 不再顯示（改輸出 Console） |
 | 開場 / 結局插圖 | `[待確認]` 呈現形式 |
 | 封面 | 2026-10-03 已交付：`Assets/Art/UI/title_cover.png`（3840×2160）、`btn_start.png`、`btn_quit.png`（按鈕原檔裁掉透明邊） |
 

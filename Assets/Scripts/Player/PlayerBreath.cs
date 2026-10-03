@@ -15,7 +15,7 @@ namespace DrownedDream
     }
 
     /// <summary>
-    /// Action：憋氣潛行（F-BRE）。按鍵進入，再按提早結束；時間到自動結束。
+    /// Action：憋氣潛行（F-BRE）。CD 結束且氧氣回滿才能按鍵進入，再按提早結束；時間到自動結束。
     /// CD 依實際憋氣時間比例計算。結果寫回 PlayerStatus.IsHoldingBreath / BreathCooldown。
     /// </summary>
     public class PlayerBreath : MonoBehaviour
@@ -61,7 +61,12 @@ namespace DrownedDream
             switch (State)
             {
                 case BreathState.Ready:
-                    if (_input.BreathPressed && _status.IsAlive) StartHold();
+                    if (_input.BreathPressed && _status.IsAlive)
+                    {
+                        // 氧氣回滿才代表可以潛行
+                        if (_status.IsOxygenFull) StartHold();
+                        else GameEvents.ShowMessage("氧氣尚未回滿，無法潛行", 1.2f);
+                    }
                     break;
 
                 case BreathState.Holding:
@@ -71,7 +76,11 @@ namespace DrownedDream
 
                 case BreathState.Cooldown:
                     _cooldownTimer -= Time.deltaTime;
-                    if (_cooldownTimer <= 0f) SetState(BreathState.Ready);
+                    if (_cooldownTimer <= 0f)
+                    {
+                        SetState(BreathState.Ready);
+                        Debug.Log("[Breath] CD 結束，氧氣開始回復（回滿後才能再次潛行）");
+                    }
                     break;
             }
             _status.SetBreath(State == BreathState.Holding, State == BreathState.Cooldown ? _cooldownTimer : 0f);
@@ -96,6 +105,7 @@ namespace DrownedDream
         {
             _holdTimer = 0f;
             SetState(BreathState.Holding);
+            Debug.Log($"[Breath] 開始憋氣（隱形），最多 {MaxHoldTime:0.0}s");
         }
 
         /// <summary>結束憋氣並依比例計算 CD。</summary>
@@ -105,6 +115,8 @@ namespace DrownedDream
             _cooldownTotal = _config.Cooldown * Mathf.Max(_config.MinCooldownRatio, ratio);
             _cooldownTimer = _cooldownTotal;
             SetState(BreathState.Cooldown);
+            // 憋氣條不在畫面上顯示，改輸出到 Console
+            Debug.Log($"[Breath] 結束憋氣：隱形 {_holdTimer:0.00}s / 最多 {MaxHoldTime:0.0}s（{ratio:P0}），CD {_cooldownTotal:0.0}s");
         }
 
         /// <summary>切換狀態、同步 Status、更新透明度。</summary>

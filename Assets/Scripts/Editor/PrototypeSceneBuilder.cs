@@ -37,6 +37,8 @@ namespace DrownedDream.EditorTools
         public const string IntroBgmPath = "Assets/Audio/BGM/bgm_intro.wav";
         /// <summary>封面底圖路徑。</summary>
         public const string TitleCoverPath = "Assets/Art/UI/title_cover.png";
+        /// <summary>HUD 圖資料夾（HP / SAN 框與填充條、氧氣泡泡）。</summary>
+        public const string HudArtDir = "Assets/Art/UI/HUD";
         /// <summary>Start 按鈕圖路徑。</summary>
         public const string StartButtonPath = "Assets/Art/UI/btn_start.png";
         /// <summary>Quit 按鈕圖路徑。</summary>
@@ -107,6 +109,8 @@ namespace DrownedDream.EditorTools
             // 必須先開新場景：NewScene(Single) 會卸載未使用的資產，
             // 若先建立資料資產，之後拿到的參照會變成已銷毀物件（綁定結果為 null）。
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            // 先匯入外部新放進來的圖檔（例如剛複製的 HUD 圖），避免綁定時找不到資產
+            AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
 
             EnsureFolder("Assets/Scenes");
             EnsureFolder(PrefabDir);
@@ -381,7 +385,15 @@ namespace DrownedDream.EditorTools
             canvasGo.AddComponent<GraphicRaycaster>(); // 滑鼠點擊 UI（封面按鈕）需要
             var effects = canvasGo.AddComponent<SanityScreenEffects>();
             Wire(effects, ("_globalLight", globalLight), ("_camera", gameCamera));
-            canvasGo.AddComponent<HUD>();
+            var hud = canvasGo.AddComponent<HUD>();
+            Wire(hud,
+                ("_portrait", UISprite($"{HudArtDir}/hud_portrait.png", 256)),
+                ("_portraitFrame", UISprite($"{HudArtDir}/hud_portrait_frame.png", 512)),
+                ("_hpFrame", UISprite($"{HudArtDir}/hud_hp_frame.png", 1024)),
+                ("_hpFill", UISprite($"{HudArtDir}/hud_hp_fill.png", 1024)),
+                ("_sanFrame", UISprite($"{HudArtDir}/hud_san_frame.png", 1024)),
+                ("_sanFill", UISprite($"{HudArtDir}/hud_san_fill.png", 1024)),
+                ("_bubbleSprites", Enumerable.Range(1, 10).Select(i => (Object)UISprite($"{HudArtDir}/hud_bubble_{i:00}.png", 128)).ToArray()));
             canvasGo.AddComponent<InventoryPanel>();
             var story = canvasGo.AddComponent<StoryPanel>();
             var title = BuildTitleScreen(canvasGo);

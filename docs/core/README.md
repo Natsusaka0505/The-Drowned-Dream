@@ -42,7 +42,7 @@ Assets/Scripts/
   Camera/    GameCamera
   World/     Room、Checkpoint、BreathBonusZone、BreathGate、SanityStageObject
   Audio/     BgmPlayer、GameAudio（音效 + 環境音）、AmbientEmitter（位置循環音）
-  UI/        HUD、InventoryPanel、StoryPanel、TitleScreen（封面）、TitleButtonHover、SanityScreenEffects、UIFactory
+  UI/        HUD、InventoryPanel、StoryPanel、TitleScreen（封面）、TitleButtonHover、HUDWidgets（UIFrameBar 框條 / UIBubbleRow 氧氣泡泡）、SanityScreenEffects、UIFactory
   Editor/    場景 / 地圖產生器（含地形自動貼圖）
 ```
 
