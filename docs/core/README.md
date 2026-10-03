@@ -22,28 +22,28 @@
 | area | `BossArea`：是否第一次進 Boss 房 | `BossArea`：偵測玩家是否進 Boss 房 |
 | 回復道具 | `RecoveryItem`：SAN 回復值、HP 回復值 | `RecoveryItem.Apply`：玩家數值回復 |
 | 武器 | `Harpoon`：是否接觸場地、拋物線下墜（重力）、飛行速度 | `Harpoon`：接觸 enemy、接觸場地 |
-| camera | `GameCamera`：目標（GameObject） | `GameCamera`：切換到玩家、切換到 Boss 房（特寫） |
+| camera | `GameCamera`：目標（GameObject）、地圖範圍 | `GameCamera`：跟隨玩家（限制在地圖內）、切換到 Boss 廳（特寫） |
 
 area / 回復道具 / 武器 / camera 規模小，Status 與 Action 寫在同一個腳本，以 `#region Status` / `#region Action` 分段。
 
-分類以外但需求（SA）要求的系統：`PlayerRespawn`（死亡復活）、`PlayerConfusion`（低 SAN 方向錯亂）、`FearSource`（恐懼範圍）、`BossController`（Boss）、`Room`（地圖區塊）、`Checkpoint`、`BreathGate`、`SanityStageObject`、`GameFlow`、`BgmPlayer`（背景音樂）、UI。
+分類以外但需求（SA）要求的系統：`PlayerRespawn`（死亡復活）、`PlayerConfusion`（低 SAN 方向錯亂）、`FearSource`（恐懼範圍）、`BossController`（Boss）、`Checkpoint`、`BreathGate`、`SanityStageObject`、`GameFlow`、`BgmPlayer`（背景音樂）、UI。
 
 ## 資料夾
 
 ```
 Assets/Scripts/
   Core/      GameFlow、GameEvents、IDamageable
-  Data/      ScriptableObject 定義（Config、EnemyData、MapConfig、TerrainTileSet）
+  Data/      ScriptableObject 定義（Config、EnemyData、MapConfig、TerrainTileSet、CaveGenConfig）
   Player/    PlayerStatus + 各 Action、Player（入口）、PlayerInputReader
   Enemy/     EnemyStatus、EnemyAI、FearSource、BossController、BossProjectile
   Area/      BossArea、SealAltar
   Item/      PickupItem（基底）、RecoveryItem、SealItem
   Weapon/    Harpoon
   Camera/    GameCamera
-  World/     Room、Checkpoint、BreathBonusZone、BreathGate、SanityStageObject
+  World/     Checkpoint、BreathBonusZone、BreathGate、SanityStageObject
   Audio/     BgmPlayer
   UI/        HUD、InventoryPanel、StoryPanel、SanityScreenEffects、UIFactory
-  Editor/    場景 / 地圖產生器（含地形自動貼圖）
+  Editor/    場景 / 地圖產生器（CaveGenerator 隨機洞窟、MapBuilder 碰撞 + 地形自動貼圖）
 ```
 
 ## 型別
@@ -70,4 +70,4 @@ Assets/Scripts/
 - 場景由 Editor 工具產生（`Drowned Dream → Build Prototype Scene`），避免多人同時改 scene。
 - 音樂素材放 `Assets/Audio/`（BGM 在 `Assets/Audio/BGM/`），場景產生器會把 BGM 設為串流 + Vorbis 並綁到 `BGM` 物件的 `BgmPlayer`。
 - 專案根目錄（Unity `Assets/` 外）：`ArtSource/` 放美術原始檔（不匯入 Unity），`Tools/` 放離線處理腳本（Python，跨平台，不屬於建置流程）。
-- 地圖由 `MapConfig`（2048×2048 地圖圖 + 碰撞遮罩）產生，見 [08-map SD-02](../feature/需求/08-map/SD/SD-02-map-tilemap.md)。
+- 地圖由 `CaveGenerator` 依 `CaveGenConfig` 種子隨機生成連通洞窟（128×96 單位，不分區塊），再由 `MapBuilder` 依碰撞遮罩產生碰撞與地形 Tilemap，見 [08-map SD-03](../feature/需求/08-map/SD/SD-03-cave-generation.md)、[SD-02](../feature/需求/08-map/SD/SD-02-map-tilemap.md)。

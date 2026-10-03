@@ -3,7 +3,7 @@ using UnityEngine;
 namespace DrownedDream
 {
     /// <summary>
-    /// Boss（F-BOSS）。由 BossRoom 啟動 / 停止；啟動時朝玩家發射彈幕。
+    /// Boss（F-BOSS）。由 BossArea 啟動 / 停止；啟動時朝玩家發射彈幕。
     /// [待確認] 攻擊模式、魚槍能否傷害 Boss（預設不行）。
     /// </summary>
     [RequireComponent(typeof(FearSource))]

@@ -32,7 +32,7 @@
 | 恐懼範圍 | `Enemy/FearSource` |
 | Boss | `Enemy/BossController`、`Enemy/BossProjectile`、`Area/SealAltar` |
 | 封印道具 | `Item/SealItem` |
-| 地圖 | `World/Room`、`Editor/MapBuilder` |
+| 地圖 | `Editor/CaveGenerator`（隨機洞窟）、`Editor/MapBuilder`（碰撞 + 地形 Tilemap） |
 | 憋氣機關 | `World/BreathBonusZone`、`World/BreathGate` |
 | 低 SAN 效果 | `UI/SanityScreenEffects`、`World/SanityStageObject` |
 | HUD / 背包 | `UI/HUD`、`UI/InventoryPanel`、`UI/UIFactory` |
@@ -46,7 +46,9 @@
 | `Assets/Data/Config/BreathConfig` | 憋氣 |
 | `Assets/Data/Config/SanityConfig` | SAN、分段、方向錯亂 |
 | `Assets/Data/Config/HarpoonConfig` | 魚槍（拋物線） |
-| `Assets/Data/Map/MapConfig` | 地圖圖、碰撞遮罩、切分、PPU |
+| `Assets/Data/Map/MapConfig` | 碰撞遮罩、PPU、地形素材 |
+| `Assets/Data/Map/CaveGenConfig` | 洞窟生成參數（種子、尺寸、物件數量） |
+| `Assets/Data/Map/TerrainTileSet` | 地形圖塊、裝飾、背景牆 |
 | `Assets/Data/Enemies/*` | 巡游魚怪、觸手、深淵之眼 |
 | `Assets/Prefabs/Items/*` | 封印碎片、鎮靜藥丸（SAN 30）、海草繃帶（HP 30） |
 
@@ -56,18 +58,9 @@
 
 | 選單 | 作用 |
 |---|---|
-| Drowned Dream → Build Prototype Scene | 重建 `Assets/Scenes/Prototype.unity`（地圖 + 內容 + 玩家 + UI） |
-| Drowned Dream → Rebuild Map | 只重建目前場景的地圖（美術換圖後使用），其他物件不動 |
+| Drowned Dream → Build Prototype Scene | 依 `CaveGenConfig` 種子生成洞窟，重建 `Assets/Scenes/Prototype.unity`（地圖 + 內容 + 玩家 + UI） |
+| Drowned Dream → Rebuild Map | 依現有遮罩只重建目前場景的地形（換地形素材後使用），不重新生成、其他物件不動 |
 
-## 原型關卡配置（4×4，座標 = 欄, 列；列 0 在最下面）
+## 原型關卡配置
 
-路線為蛇行：第 3 列 左→右 ↓ 第 2 列 右→左 ↓ 第 1 列 左→右 ↓ 第 0 列 右→左。
-
-| 列＼欄 | 0 | 1 | 2 | 3 |
-|---|---|---|---|---|
-| 3 | **起點**、存檔點、藥丸 | 魚怪 | 深淵之眼、**封印 #1**、幻覺 | 海草繃帶、地洞 ↓ |
-| 2 | 存檔點、地洞 ↓ | 海草繃帶、深淵之眼、幻覺 | 魚怪、藥丸 | 觸手、階梯 |
-| 1 | 階梯、**憋氣屏障** | **封印 #2**、魚怪 | 深淵之眼、海草繃帶 | 存檔點、地洞 ↓ |
-| 0 | **Boss**、祭壇 | 存檔點、海草繃帶 | 魚怪、藥丸 | 觸手、**封印 #3**、階梯 |
-
-地洞下方的區塊有之字階梯可以爬回上方。
+2026-10-03 起改為隨機洞窟，敵人 / 道具 / 存檔點由生成器自動擺放，見 [08-map SD-03](../../08-map/SD/SD-03-cave-generation.md)。

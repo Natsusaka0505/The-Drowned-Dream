@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6ededad0f0eee437489af67b3c714de1, type: 3}
+  m_Name: TerrainTileSet
+  m_EditorClassIdentifier: Assembly-CSharp::DrownedDream.TerrainTileSet
+  _terrain:
+  - {fileID: 21300000, guid: dc2ee72bde6704c12a4595dba23e3bdf, type: 3}
+  - {fileID: 21300000, guid: 3437b676da473471e9794975c2df2519, type: 3}
+  - {fileID: 21300000, guid: abe5dc9ee77be49f1bea03f677b13a40, type: 3}
+  - {fileID: 21300000, guid: 37fbca342c5d34dd48544c19b77bf211, type: 3}
+  - {fileID: 21300000, guid: 4c5eaa03834f44288a50c13d6137aa69, type: 3}
+  - {fileID: 21300000, guid: 76ba491900694435ba8d198cb151d628, type: 3}
+  - {fileID: 21300000, guid: 165d925a56f834e6d8e1b12e28a65b15, type: 3}
+  - {fileID: 21300000, guid: 8d09c1a1bca2e4c7ebe6474866184e1f, type: 3}
+  - {fileID: 21300000, guid: c8592335cfd6d44b2b055851fdf0fe77, type: 3}
+  _backWall:
+  - {fileID: 21300000, guid: d60896b722a92404396e0b886d2d931c, type: 3}
+  - {fileID: 21300000, guid: 27ff6fc045b8d4fcfbb7d0b5fa4052a7, type: 3}
+  - {fileID: 21300000, guid: ff3fdfcdf0c1143339b3d39c122805da, type: 3}
+  - {fileID: 21300000, guid: ca6d7753edaff4d3fba1b527ee10c70b, type: 3}
+  - {fileID: 21300000, guid: 514bb378e632f46a78da83d10ac723db, type: 3}
+  - {fileID: 21300000, guid: 93b297e1b5058438a8e3c0baff0b5c14, type: 3}
+  - {fileID: 21300000, guid: 0588809b15173441db6385d84cb3fd14, type: 3}
+  - {fileID: 21300000, guid: f0e27e3da9bdd46abaa8c321055c30da, type: 3}
+  - {fileID: 21300000, guid: e63fcf40215de4ee1a8b54f6d089ab00, type: 3}
+  _backWallColor: {r: 1, g: 1, b: 1, a: 0.85}
+  _wallDecor:
+  - {fileID: 21300000, guid: 5f27e2d6277874544acd2c8820ffad4d, type: 3}
+  _wallDecorChance: 0.01
+  _ceilingDecor:
+  - {fileID: 21300000, guid: 0cd24d41c38d44c0e96bc764ceb63858, type: 3}
+  _leftDecor:
+  - {fileID: 21300000, guid: 8c13a2930609946f3b2f897a3806dd78, type: 3}
+  _rightDecor:
+  - {fileID: 21300000, guid: 7672f917f200343f192cadb365e520db, type: 3}
+  _ceilingChance: 0.2
+  _sideChance: 0.25
+  _decorScale: 1.5
+  _seed: 12345
