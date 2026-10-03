@@ -32,8 +32,8 @@ namespace DrownedDream
         public float MoveX => Active ? _move.ReadValue<float>() : 0f;
         /// <summary>本幀按下跳躍。</summary>
         public bool JumpPressed => Active && _jump.WasPressedThisFrame();
-        /// <summary>本幀放開跳躍（用於短跳）。</summary>
-        public bool JumpReleased => Active && _jump.WasReleasedThisFrame();
+        /// <summary>跳躍鍵按住中（落地後自動連跳用）。</summary>
+        public bool JumpHeld => Active && _jump.IsPressed();
         /// <summary>本幀按下發射。</summary>
         public bool FirePressed => Active && _fire.WasPressedThisFrame();
         /// <summary>本幀按下憋氣。</summary>

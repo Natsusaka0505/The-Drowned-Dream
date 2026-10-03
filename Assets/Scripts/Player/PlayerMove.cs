@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace DrownedDream
 {
-    /// <summary>Action：左右移動 + 跳躍（F-MAP-07）。速度讀 PlayerStatus.MoveSpeed；水平輸入經過 PlayerConfusion。</summary>
+    /// <summary>Action：左右移動 + 跳躍（F-MAP-07）。跳躍高度固定；按住跳躍鍵則落地後自動連跳。速度讀 PlayerStatus.MoveSpeed；水平輸入經過 PlayerConfusion。</summary>
     [RequireComponent(typeof(Rigidbody2D), typeof(BoxCollider2D))]
     public class PlayerMove : MonoBehaviour
     {
@@ -28,8 +28,8 @@ namespace DrownedDream
         private float _coyoteTimer;
         /// <summary>跳躍緩衝剩餘秒數。</summary>
         private float _jumpBufferTimer;
-        /// <summary>是否要在下個物理步截斷上升速度（短跳）。</summary>
-        private bool _jumpCutRequested;
+        /// <summary>跳躍鍵是否按住中（落地後自動連跳）。</summary>
+        private bool _jumpHeld;
 
         /// <summary>面向：1 右、-1 左。</summary>
         public int Facing { get; private set; } = 1;
@@ -70,7 +70,7 @@ namespace DrownedDream
             }
 
             if (_input.JumpPressed) _jumpBufferTimer = Config.JumpBufferTime;
-            if (_input.JumpReleased) _jumpCutRequested = true;
+            _jumpHeld = _input.JumpHeld;
         }
 
         /// <summary>套用水平加減速、跳躍與下落速度上限。</summary>
@@ -88,17 +88,14 @@ namespace DrownedDream
             if (!IsGrounded) rate *= Config.AirControl;
             velocity.x = Mathf.MoveTowards(velocity.x, target, rate * dt);
 
-            if (_jumpBufferTimer > 0f && _coyoteTimer > 0f)
+            // 固定高度：不論短按或長按都用同一個初速；按住不放則一落地就再跳
+            bool pressedJump = _jumpBufferTimer > 0f && _coyoteTimer > 0f;
+            bool heldJump = _jumpHeld && IsGrounded;
+            if (pressedJump || heldJump)
             {
                 velocity.y = Config.JumpVelocity;
                 _jumpBufferTimer = 0f;
                 _coyoteTimer = 0f;
-                _jumpCutRequested = false;
-            }
-            else if (_jumpCutRequested)
-            {
-                if (velocity.y > 0f) velocity.y *= Config.JumpCutMultiplier;
-                _jumpCutRequested = false;
             }
 
             // 下降時加重重力，讓落下比上升快（手感較俐落）

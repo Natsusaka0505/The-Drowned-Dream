@@ -20,7 +20,6 @@ MonoBehaviour:
   _gravityScale: 1.6
   _fallGravityMultiplier: 2
   _maxFallSpeed: 12
-  _jumpCutMultiplier: 0.5
   _coyoteTime: 0.1
   _jumpBufferTime: 0.12
   _groundCheckDistance: 0.08

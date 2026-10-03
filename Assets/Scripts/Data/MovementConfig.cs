@@ -41,10 +41,6 @@ namespace DrownedDream
         [Tooltip("最大下落速度（水阻）")] [SerializeField] private float _maxFallSpeed = 0f;
         /// <summary>最大下落速度（模擬水阻）（唯讀）</summary>
         public float MaxFallSpeed => _maxFallSpeed;
-        /// <summary>提早放開跳躍鍵時保留的上升速度比例</summary>
-        [Range(0f, 1f)] [SerializeField] private float _jumpCutMultiplier = 0f;
-        /// <summary>提早放開跳躍鍵時保留的上升速度比例（唯讀）</summary>
-        public float JumpCutMultiplier => _jumpCutMultiplier;
         /// <summary>離開地面後仍可起跳的寬限秒數</summary>
         [SerializeField] private float _coyoteTime = 0.1f;
         /// <summary>離開地面後仍可起跳的寬限秒數（唯讀）</summary>
