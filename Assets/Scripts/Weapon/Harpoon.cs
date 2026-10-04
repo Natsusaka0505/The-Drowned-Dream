@@ -124,6 +124,14 @@ namespace DrownedDream
             if (_velocity.sqrMagnitude < 0.0001f) return;
             float angle = Mathf.Atan2(_velocity.y, _velocity.x) * Mathf.Rad2Deg;
             transform.rotation = Quaternion.Euler(0f, 0f, angle);
+            // 往左飛時上下翻轉外觀，倒鉤才不會朝下（Visual 子物件）
+            var visual = transform.Find("Visual");
+            if (visual != null)
+            {
+                var scale = visual.localScale;
+                scale.y = Mathf.Abs(scale.y) * (_velocity.x < 0f ? -1f : 1f);
+                visual.localScale = scale;
+            }
         }
 
         /// <summary>玩家碰到插住的魚叉即撿回。</summary>

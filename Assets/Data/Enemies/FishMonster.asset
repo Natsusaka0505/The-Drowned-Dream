@@ -26,9 +26,52 @@ MonoBehaviour:
   _attackWindup: 0.6
   _attackActiveTime: 0.4
   _attackCooldown: 1.5
+  _dashRange: 5
+  _dashWindup: 0.5
+  _dashSpeed: 12
+  _dashTime: 0.35
+  _dashCooldown: 2.5
+  _bubbleInterval: 3
+  _bubbleSpeed: 3
+  _bubbleSize: 0.6
+  _bubbleLifetime: 4
+  _spikeCooldown: 3
+  _spikeWindup: 0.7
+  _spikeActive: 0.3
+  _spikeSize: {x: 1.2, y: 2.2}
+  _beamCooldown: 3.5
+  _beamAim: 1
+  _beamActive: 0.35
+  _beamLength: 14
+  _beamWidth: 0.6
+  _beamSanityDamage: 15
+  _beamFx: {fileID: 0}
+  _beamFxWidth: 2.4
+  _beamFxTime: 0.45
   _sanityDrainPerSecond: 5
   _sanityRestoreOnKill: 15
   _dropPrefab: {fileID: 2252795386448575131, guid: fad187cce860740beb504f2fc393537f, type: 3}
   _dropChance: 0.5
+  _hoverHeight: 1
+  _bobHeight: 0.35
+  _bobSpeed: 2.5
+  _animFrames:
+  - {fileID: 21300000, guid: 39fd42d1eb4674b13aa39a7c660702c0, type: 3}
+  - {fileID: 21300000, guid: e00fee4c2d11c477c9592cd22730329d, type: 3}
+  - {fileID: 21300000, guid: 58480c649b8934d8eb0be9b27c3d2449, type: 3}
+  - {fileID: 21300000, guid: d89b4c912ef434e1cb4b6791646f1cb2, type: 3}
+  - {fileID: 21300000, guid: 0fd33186ba2174a0eaf34533a46cdb11, type: 3}
+  - {fileID: 21300000, guid: 764a9374863a04bb2ab6d218777faab3, type: 3}
+  _animDurations:
+  - 0.12
+  - 0.12
+  - 0.12
+  - 0.12
+  - 0.12
+  - 0.12
+  _baseSprite: {fileID: 0}
+  _lookSprite: {fileID: 0}
+  _lookRadius: 0.22
+  _tendrilSprite: {fileID: 0}
   _color: {r: 0.8, g: 0.3, b: 0.3, a: 1}
-  _size: {x: 1.4, y: 0.8}
+  _size: {x: 1.6, y: 1.6}

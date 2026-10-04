@@ -12,7 +12,7 @@ namespace DrownedDream
         /// <summary>要放出的寶箱 Prefab（黑寶箱）。</summary>
         [SerializeField] private GameObject _chestPrefab;
         /// <summary>出現時的提示文字。</summary>
-        [SerializeField] private string _message = "遠處傳來低語……最後一尊雕像出現在洞窟某處。";
+        [SerializeField] private string _message = "遠處傳來低語……最後一尊邪神雕像出現在洞窟某處！\n跟著畫面邊緣的箭頭，或打開背包（Tab）在地圖上查看位置。";
         /// <summary>提示延遲秒數（避免和 Boss 房提示重疊）。</summary>
         [SerializeField] private float _messageDelay = 3f;
 
@@ -31,7 +31,8 @@ namespace DrownedDream
             if (_spawned || _chestPrefab == null || transform.childCount == 0) return;
             _spawned = true;
             var point = transform.GetChild(Random.Range(0, transform.childCount));
-            Instantiate(_chestPrefab, point.position, Quaternion.identity);
+            var chest = Instantiate(_chestPrefab, point.position, Quaternion.identity).GetComponent<TreasureChest>();
+            if (chest != null) chest.IsFinalSeal = true; // 小地圖閃爍標示、HUD 方向箭頭
             Debug.Log($"[Seal] 最後一個封印道具出現在 {point.name}（{point.position}）");
             StartCoroutine(ShowMessageLater());
         }
@@ -40,7 +41,7 @@ namespace DrownedDream
         private IEnumerator ShowMessageLater()
         {
             yield return new WaitForSeconds(_messageDelay);
-            GameEvents.ShowMessage(_message, 3f);
+            GameEvents.ShowMessage(_message, 5f);
         }
 
         /// <summary>在場景中畫出所有候選點。</summary>

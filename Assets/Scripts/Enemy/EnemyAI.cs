@@ -5,7 +5,7 @@ namespace DrownedDream
     /// <summary>
     /// 敵人 Action（docs/core）：自動移動 AI（左右移動）、偵測玩家、攻擊判斷。
     /// 行為依 EnemyData.Behaviour：
-    /// Patrol（魚怪）左右巡邏 / 追擊 + 蓄力衝刺 + 吐泡泡彈；Stationary（觸手）橫戳 + 地面突刺；Passive（深淵之眼）凝視光束。
+    /// Patrol（水母）範圍外隨機遊走、範圍內上下左右追擊 + 蓄力衝刺 + 吐泡泡彈；Stationary（觸手）橫戳 + 地面突刺；Passive（深淵之眼）凝視光束。
     /// 玩家憋氣隱形時不偵測、不追擊、不攻擊（F-ENM-03）。
     /// </summary>
     [RequireComponent(typeof(EnemyStatus), typeof(Rigidbody2D))]
@@ -40,10 +40,6 @@ namespace DrownedDream
         [SerializeField] private float _maxX;
         /// <summary>地形 Layer（擋彈幕、截斷光束；未設定時用名為 Ground 的 Layer）。</summary>
         [SerializeField] private LayerMask _groundMask;
-        /// <summary>外觀上下浮動幅度（單位；只動外觀，不動碰撞框）。</summary>
-        [SerializeField] private float _bobHeight = 0.08f;
-        /// <summary>外觀上下浮動速度（弧度 / 秒）。</summary>
-        [SerializeField] private float _bobSpeed = 2.5f;
 
         /// <summary>敵人數值。</summary>
         private EnemyStatus _status;
@@ -55,8 +51,6 @@ namespace DrownedDream
         private State _state;
         /// <summary>狀態計時（觸手攻擊用）。</summary>
         private float _stateTimer;
-        /// <summary>巡邏方向（1 右、-1 左）。</summary>
-        private int _patrolDir = 1;
         /// <summary>受擊閃白剩餘秒數。</summary>
         private float _hitFlash;
         /// <summary>原始顏色。</summary>
@@ -69,8 +63,12 @@ namespace DrownedDream
         private float _bobPhase;
         /// <summary>魚怪衝刺冷卻倒數。</summary>
         private float _dashCooldownTimer;
-        /// <summary>魚怪衝刺方向（1 右、-1 左）。</summary>
-        private int _dashDir = 1;
+        /// <summary>魚怪衝刺方向（蓄力開始時朝向玩家，單位向量）。</summary>
+        private Vector2 _dashVector = Vector2.right;
+        /// <summary>隨機遊走的目標點。</summary>
+        private Vector2 _wanderTarget;
+        /// <summary>遊走抵達後停留的剩餘秒數。</summary>
+        private float _wanderPause;
         /// <summary>魚怪泡泡彈倒數。</summary>
         private float _bubbleTimer;
         /// <summary>觸手地刺倒數。</summary>
@@ -88,6 +86,7 @@ namespace DrownedDream
             _body = GetComponent<Rigidbody2D>();
             _body.bodyType = RigidbodyType2D.Kinematic;
             _home = transform.position;
+            _wanderTarget = _home;
             if (_renderer != null)
             {
                 _baseColor = _renderer.color;
@@ -141,24 +140,37 @@ namespace DrownedDream
             switch (_state)
             {
                 case State.Patrol:
+                case State.Return:
+                    // 玩家不在範圍內：在出生點附近隨機遊走（停一下 → 選新目標 → 漂過去）
                     if (_status.PlayerDetected)
                     {
                         _state = State.Chase;
                         break;
                     }
                     _status.SetMoveSpeed(Data.MoveSpeed);
-                    float targetX = _home.x + _patrolDir * Data.PatrolDistance;
-                    if (MoveHorizontally(targetX)) _patrolDir = -_patrolDir;
+                    if (_wanderPause > 0f)
+                    {
+                        _wanderPause -= Time.deltaTime;
+                        _status.SetMoving(false);
+                        break;
+                    }
+                    if (Move2D(_wanderTarget))
+                    {
+                        _wanderPause = Random.Range(0.4f, 1.5f);
+                        _wanderTarget = PickWanderTarget();
+                    }
                     break;
 
                 case State.Chase:
+                    // 玩家在範圍內：上下左右都追過去（漂浮怪）
                     if (!DetectPlayer(player, _status.DetectRange * Data.LoseRangeMultiplier))
                     {
-                        _state = State.Return;
+                        _state = State.Patrol;
+                        _wanderTarget = PickWanderTarget();
                         break;
                     }
                     _status.SetMoveSpeed(Data.ChaseSpeed);
-                    MoveHorizontally(player.transform.position.x);
+                    Move2D(player.transform.position);
                     UpdateBubbleShot(player);
                     TryStartDash(player);
                     break;
@@ -178,22 +190,12 @@ namespace DrownedDream
                 case State.Dash:
                     _stateTimer -= Time.deltaTime;
                     _status.SetMoveSpeed(Data.DashSpeed);
-                    MoveHorizontally(_body.position.x + _dashDir * 100f); // 朝衝刺方向直衝（活動範圍外會被夾住）
+                    Move2D(_body.position + _dashVector * 100f); // 朝蓄力時鎖定的方向直衝
                     if (_stateTimer <= 0f)
                     {
                         _state = State.Chase;
                         _dashCooldownTimer = Data.DashCooldown;
                     }
-                    break;
-
-                case State.Return:
-                    if (_status.PlayerDetected)
-                    {
-                        _state = State.Chase;
-                        break;
-                    }
-                    _status.SetMoveSpeed(Data.MoveSpeed);
-                    if (MoveHorizontally(_home.x)) _state = State.Patrol;
                     break;
             }
             TryAttack(player, _status.AttackRange);
@@ -204,7 +206,7 @@ namespace DrownedDream
         {
             _dashCooldownTimer -= Time.deltaTime;
             if (_dashCooldownTimer > 0f || Data.DashTime <= 0f || !DetectPlayer(player, Data.DashRange)) return;
-            _dashDir = player.transform.position.x >= _body.position.x ? 1 : -1;
+            _dashVector = ((Vector2)player.transform.position - _body.position).normalized;
             _state = State.DashWindup;
             _stateTimer = Data.DashWindup;
         }
@@ -297,6 +299,60 @@ namespace DrownedDream
             UpdateAttackVisual();
         }
 
+        /// <summary>在出生點附近選一個遊走目標（水平 ±巡邏距離、垂直 -0.5 ~ +1，夾在活動範圍內）。</summary>
+        private Vector2 PickWanderTarget()
+        {
+            float x = _home.x + Random.Range(-Data.PatrolDistance, Data.PatrolDistance);
+            if (_maxX > _minX) x = Mathf.Clamp(x, _minX, _maxX);
+            float y = _home.y + Random.Range(-0.5f, 1f);
+            return new Vector2(x, y);
+        }
+
+        /// <summary>
+        /// 上下左右移向目標（漂浮怪用），回傳是否已抵達或被擋住。
+        /// 垂直方向最低到「腳底貼地」的高度、最高到出生點上方 3 單位；前方有牆 / 平台就改走單一軸，兩軸都擋住視為抵達。
+        /// </summary>
+        private bool Move2D(Vector2 target)
+        {
+            if (_maxX > _minX) target.x = Mathf.Clamp(target.x, _minX, _maxX);
+            target.y = Mathf.Clamp(target.y, _home.y - Data.HoverHeight, _home.y + 3f);
+            Vector2 pos = _body.position;
+            float step = (float)_status.MoveSpeed * Time.deltaTime;
+            Vector2 next = Vector2.MoveTowards(pos, target, step);
+            Vector2 delta = next - pos;
+            if (delta.sqrMagnitude < 0.000001f)
+            {
+                _status.SetMoving(false);
+                return true;
+            }
+
+            if (Blocked(pos, delta))
+            {
+                // 試著只走水平或只走垂直（沿牆滑動）
+                var dx = new Vector2(delta.x, 0f);
+                var dy = new Vector2(0f, delta.y);
+                if (dx.sqrMagnitude > 0f && !Blocked(pos, dx)) delta = dx;
+                else if (dy.sqrMagnitude > 0f && !Blocked(pos, dy)) delta = dy;
+                else
+                {
+                    _status.SetMoving(false);
+                    return true;
+                }
+            }
+
+            _status.SetMoving(true);
+            _body.MovePosition(pos + delta);
+            if (_renderer != null && Mathf.Abs(delta.x) > 0.0001f) _renderer.flipX = delta.x < 0f;
+            return Vector2.Distance(pos + delta, target) < 0.05f;
+        }
+
+        /// <summary>沿 delta 方向移動時，身體前緣是否會撞到地形。</summary>
+        private bool Blocked(Vector2 pos, Vector2 delta)
+        {
+            float extent = Mathf.Abs(delta.x) > Mathf.Abs(delta.y) ? Data.Size.x / 2f : Data.Size.y / 2f;
+            return Physics2D.Raycast(pos, delta.normalized, delta.magnitude + extent, _groundMask).collider != null;
+        }
+
         /// <summary>只沿 X 軸移向目標，回傳是否已抵達。</summary>
         private bool MoveHorizontally(float targetX)
         {
@@ -322,7 +378,7 @@ namespace DrownedDream
         private void UpdateBob()
         {
             if (_renderer == null) return;
-            float y = Mathf.Sin(Time.time * _bobSpeed + _bobPhase) * _bobHeight;
+            float y = Mathf.Sin(Time.time * Data.BobSpeed + _bobPhase) * Data.BobHeight; // 幅度 / 速度在 EnemyData 設定
             _renderer.transform.localPosition = _baseVisualPos + new Vector3(0f, y, 0f);
         }
 

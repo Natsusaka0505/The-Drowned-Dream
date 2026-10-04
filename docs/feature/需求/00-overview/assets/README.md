@@ -26,6 +26,9 @@
 | 深淵之眼（眼球） | 約 38×38 | 2026-10-04 程式繪製暫用圖（分層）：眼白 `eye_base.png`、瞳孔 `eye_iris.png`（追視玩家）、眼皮眨眼 4 格 `eye_lid_0~3.png`，在 `Assets/Art/Enemies/` |
 | Boss | 約 144×208 | 2026-10-04：待機動畫已交付 `boss.gif`（1280×720、33 格），拆格放在 `Assets/Art/Boss/`。`[待確認]` 請美術補 PNG 序列圖（全彩、半透明邊緣）；攻擊 / 被封印動畫尚無 |
 | 邪神雕像（封印道具）/ 鎮靜藥丸 / 海草繃帶 | 約 20×20 | 場景圖示。2026-10-03 已交付：`Assets/Art/Items/item_idol.png`、`item_pill.png`、`item_bandage.png`（原檔裁掉透明邊並縮圖） |
+| 水母（取代紅色魚怪） | — | 2026-10-04 已交付 6 格：`Assets/Art/Enemies/jellyfish_0~5.png`（裁邊縮成 256 寬） |
+| 魚叉 | — | 2026-10-04 已交付 `Speargun.png`：轉成水平、槍頭朝右 → `Assets/Art/Weapon/harpoon.png`（512×92），飛行時依方向旋轉 |
+| 精靈 | — | 2026-10-04 已交付 `elf.png` → `Assets/Art/UI/Elf/elf.png`，用於提示對話框與背包 |
 | 落雷 / 光束特效 | 2026-10-04：使用素材包 FX Lightning II free（`Assets/FX_Kandol_Pack/FX_lightning_II`）：落雷 `Prefabs/fx_lightning_02.prefab`、深淵之眼光束 `Prefabs/fx_lightning_01.prefab`。素材包材質為 built-in 管線，在 URP 下若顯示粉紅色需換 Shader |
 | 寶箱（灰 / 藍灰 / 黑，各有關 / 開） | 約 195×176 | 2026-10-03 由 `ArtSource/map_objects.png` 切出並去背：`Assets/Art/Chests/chest_{gray,bluegray,black}_{closed,open}.png`，同色關 / 開同尺寸、底部對齊 |
 | 存檔點 | 約 16×38 | 未啟用 / 啟用 |

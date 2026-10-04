@@ -196,6 +196,20 @@ namespace DrownedDream
         /// <summary>掉落機率（唯讀）</summary>
         public float DropChance => _dropChance;
 
+        [Header("漂浮")]
+        /// <summary>離地高度（碰撞框底部比地面高多少；水母等漂浮怪用）</summary>
+        [SerializeField] private float _hoverHeight;
+        /// <summary>離地高度（唯讀）</summary>
+        public float HoverHeight => _hoverHeight;
+        /// <summary>外觀上下漂浮幅度（只動外觀）</summary>
+        [SerializeField] private float _bobHeight = 0.08f;
+        /// <summary>外觀上下漂浮幅度（唯讀）</summary>
+        public float BobHeight => _bobHeight;
+        /// <summary>外觀上下漂浮速度（弧度 / 秒）</summary>
+        [SerializeField] private float _bobSpeed = 2.5f;
+        /// <summary>外觀上下漂浮速度（唯讀）</summary>
+        public float BobSpeed => _bobSpeed;
+
         [Header("外觀（逐格動畫；沒有畫格時用原型色塊）")]
         /// <summary>外觀畫格（依序循環播放）</summary>
         [SerializeField] private Sprite[] _animFrames;

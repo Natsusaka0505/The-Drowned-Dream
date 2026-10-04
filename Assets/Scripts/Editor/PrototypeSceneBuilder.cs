@@ -79,6 +79,12 @@ namespace DrownedDream.EditorTools
         private static readonly Vector2 PlayerPivotRight = new Vector2(0.277f, 0.015f);
         /// <summary>面向左的 pivot。</summary>
         private static readonly Vector2 PlayerPivotLeft = new Vector2(0.660f, 0.015f);
+        /// <summary>魚叉圖（美術 Speargun.png 轉成水平、槍頭朝右）。</summary>
+        public const string HarpoonSpritePath = "Assets/Art/Weapon/harpoon.png";
+        /// <summary>魚槍圖示（背包的魚叉欄位）。</summary>
+        public const string GunIconPath = "Assets/Art/UI/gun_icon.png";
+        /// <summary>精靈圖（提示對話框與背包）。</summary>
+        public const string ElfSpritePath = "Assets/Art/UI/Elf/elf.png";
         /// <summary>音效設定資產路徑。</summary>
         private const string AudioConfigPath = "Assets/Data/Config/AudioConfig.asset";
         /// <summary>音效設定欄位 ↔ 音檔路徑 ↔ 是否循環（見 SD-02 音效）。</summary>
@@ -283,7 +289,9 @@ namespace DrownedDream.EditorTools
                 ("_dropPrefab", d.Pill),
                 ("_dropChance", 0.5f),
                 ("_color", new Color(0.8f, 0.3f, 0.3f)),
-                ("_size", new Vector2(1.4f, 0.8f))));
+                ("_hoverHeight", 1f),   // 水母漂浮在空中
+                ("_bobHeight", 0.35f),
+                ("_size", new Vector2(1.6f, 1.6f))));
 
             d.Tentacle = Asset<EnemyData>($"{DataDir}/Enemies/Tentacle.asset", so => Set(so,
                 ("_displayName", "觸手"),
@@ -317,6 +325,7 @@ namespace DrownedDream.EditorTools
                 ("_sanityRestoreOnKill", 25f),
                 ("_color", new Color(0.95f, 0.9f, 0.4f)),
                 ("_size", new Vector2(1.2f, 1.2f))));
+            AssignEnemyArt(d.Fish, "jellyfish", 6, new[] { 0.12f, 0.12f, 0.12f, 0.12f, 0.12f, 0.12f }, null); // 水母（取代紅色魚怪）
             AssignEnemyArt(d.Eye, "eye_lid", 4, new[] { 2.2f, 0.05f, 0.08f, 0.05f }, null);      // 眼皮：張眼久一點，偶爾眨眼
             if (d.Eye.BaseSprite == null)
             {
@@ -392,10 +401,20 @@ namespace DrownedDream.EditorTools
         {
             var go = new GameObject("Harpoon") { layer = s_harpoonLayer };
             var visual = Child(go.transform, "Visual", Vector2.zero);
-            var shaft = MakeSprite(Child(visual, "Shaft", Vector2.zero).gameObject, s_square, new Color(0.85f, 0.85f, 0.8f), 12);
-            shaft.transform.localScale = new Vector3(0.9f, 0.1f, 1f);
-            var tip = MakeSprite(Child(visual, "Tip", new Vector2(0.5f, 0f)).gameObject, s_square, new Color(0.7f, 0.75f, 0.8f), 12);
-            tip.transform.localScale = new Vector3(0.2f, 0.22f, 1f);
+            ConfigureSprite(HarpoonSpritePath, 420, SpriteAlignment.Center, 512, compressed: true); // 512px ≈ 1.2 單位長
+            var harpoonSprite = AssetDatabase.LoadAssetAtPath<Sprite>(HarpoonSpritePath);
+            if (harpoonSprite != null)
+            {
+                MakeSprite(Child(visual, "Spear", Vector2.zero).gameObject, harpoonSprite, Color.white, 12); // 美術魚叉圖（槍頭朝右）
+            }
+            else
+            {
+                Debug.LogWarning("[DrownedDream] 找不到魚叉圖，改用佔位方塊：" + HarpoonSpritePath);
+                var shaft = MakeSprite(Child(visual, "Shaft", Vector2.zero).gameObject, s_square, new Color(0.85f, 0.85f, 0.8f), 12);
+                shaft.transform.localScale = new Vector3(0.9f, 0.1f, 1f);
+                var tip = MakeSprite(Child(visual, "Tip", new Vector2(0.5f, 0f)).gameObject, s_square, new Color(0.7f, 0.75f, 0.8f), 12);
+                tip.transform.localScale = new Vector3(0.2f, 0.22f, 1f);
+            }
 
             var col = go.AddComponent<BoxCollider2D>();
             col.size = new Vector2(1f, 0.6f);
@@ -445,6 +464,8 @@ namespace DrownedDream.EditorTools
             Wire(effects, ("_globalLight", globalLight), ("_camera", gameCamera));
             var hud = canvasGo.AddComponent<HUD>();
             Wire(hud,
+                ("_harpoonSprite", AssetDatabase.LoadAssetAtPath<Sprite>(HarpoonSpritePath)),
+                ("_elfSprite", UISprite(ElfSpritePath, 256)),
                 ("_portrait", UISprite($"{HudArtDir}/hud_portrait.png", 256)),
                 ("_portraitFrame", UISprite($"{HudArtDir}/hud_portrait_frame.png", 512)),
                 ("_hpFrame", UISprite($"{HudArtDir}/hud_hp_frame.png", 1024)),
@@ -452,7 +473,13 @@ namespace DrownedDream.EditorTools
                 ("_sanFrame", UISprite($"{HudArtDir}/hud_san_frame.png", 1024)),
                 ("_sanFill", UISprite($"{HudArtDir}/hud_san_fill.png", 1024)),
                 ("_bubbleSprites", Enumerable.Range(1, 10).Select(i => (Object)UISprite($"{HudArtDir}/hud_bubble_{i:00}.png", 128)).ToArray()));
-            canvasGo.AddComponent<InventoryPanel>();
+            var inventory = canvasGo.AddComponent<InventoryPanel>();
+            Wire(inventory,
+                ("_harpoonIcon", UISprite(GunIconPath, 256)), // 背包用魚槍圖
+                ("_sealIcon", AssetDatabase.LoadAssetAtPath<Sprite>(IdolSpritePath)),
+                ("_hpIcon", AssetDatabase.LoadAssetAtPath<Sprite>(BandageSpritePath)),
+                ("_sanityIcon", AssetDatabase.LoadAssetAtPath<Sprite>(PillSpritePath)),
+                ("_elfSprite", UISprite(ElfSpritePath, 256)));
             var story = canvasGo.AddComponent<StoryPanel>();
             var title = BuildTitleScreen(canvasGo);
 
@@ -614,6 +641,7 @@ namespace DrownedDream.EditorTools
                     var inst = (GameObject)PrefabUtility.InstantiatePrefab(prefabs[i % prefabs.Count], group);
                     inst.transform.position = spots[i];
                     ResizeFloat(inst, length);
+                    SoftenFloat(inst);
                     continue;
                 }
                 var go = new GameObject($"Platform{i}");
@@ -667,6 +695,107 @@ namespace DrownedDream.EditorTools
                 box.offset = new Vector2(start + count / 2f, box.offset.y);
                 PrefabUtility.RecordPrefabInstancePropertyModifications(box);
             }
+        }
+
+        /// <summary>柔化後的浮台圖存放資料夾（依 Prefab 名稱 + 格數快取；改了柔化參數要刪掉這個資料夾重建）。</summary>
+        private const string SoftPlatformDir = "Assets/Art/Platforms";
+
+        /// <summary>
+        /// 浮台邊緣不規則柔化：把這個實例 Tilemap 用到的圖塊拼成一張圖，套上不規則的透明遮罩
+        /// （兩端參差淡出、底部像岩石下緣、頂面只微微起伏以免看起來站不穩），存成 Sprite 取代 Tilemap 的顯示。
+        /// 碰撞框不變。
+        /// </summary>
+        private static void SoftenFloat(GameObject inst)
+        {
+            var tilemap = inst.GetComponentInChildren<UnityEngine.Tilemaps.Tilemap>();
+            if (tilemap == null) return;
+            tilemap.CompressBounds();
+            var bounds = tilemap.cellBounds;
+            int count = bounds.size.x;
+            if (count <= 0) return;
+
+            var source = PrefabUtility.GetCorrespondingObjectFromSource(inst);
+            string key = $"{(source != null ? source.name : inst.name)}_{count}";
+            string path = $"{SoftPlatformDir}/{key}.png";
+            if (!File.Exists(path) && !BuildSoftStrip(tilemap, bounds, path)) return;
+
+            ConfigureSprite(path, 100, SpriteAlignment.Center, 2048, compressed: true);
+            var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            if (sprite == null) return;
+
+            // 圖塊範圍：x = xMin ~ xMax、y = yMin ~ yMin+1（tilemap 局部座標，一格 = 1）
+            var soft = new GameObject("SoftVisual");
+            soft.transform.SetParent(tilemap.transform, false);
+            soft.transform.localPosition = new Vector3(bounds.xMin + count / 2f, bounds.yMin + 0.5f, 0f);
+            var renderer = tilemap.GetComponent<UnityEngine.Tilemaps.TilemapRenderer>();
+            var sr = MakeSprite(soft, sprite, Color.white, renderer != null ? renderer.sortingOrder + 1 : 1);
+            if (renderer != null)
+            {
+                renderer.enabled = false;
+                PrefabUtility.RecordPrefabInstancePropertyModifications(renderer);
+            }
+        }
+
+        /// <summary>拼出圖塊長條並套不規則柔化遮罩，存成 PNG；成功回傳 true。</summary>
+        private static bool BuildSoftStrip(UnityEngine.Tilemaps.Tilemap tilemap, BoundsInt bounds, string path)
+        {
+            int count = bounds.size.x;
+            var first = tilemap.GetSprite(new Vector3Int(bounds.xMin, bounds.yMin, 0));
+            if (first == null) return false;
+            int tileW = Mathf.RoundToInt(first.rect.width);
+            int tileH = Mathf.RoundToInt(first.rect.height);
+
+            // 原圖不一定開 Read/Write，直接讀檔
+            var sheetPath = AssetDatabase.GetAssetPath(first.texture);
+            var sheet = new Texture2D(2, 2);
+            if (!ImageConversion.LoadImage(sheet, File.ReadAllBytes(sheetPath))) return false;
+
+            int w = count * tileW;
+            var pixels = new Color[w * tileH];
+            for (int i = 0; i < count; i++)
+            {
+                var sp = tilemap.GetSprite(new Vector3Int(bounds.xMin + i, bounds.yMin, 0));
+                if (sp == null) continue;
+                var r = sp.rect;
+                var block = sheet.GetPixels((int)r.x, (int)r.y, tileW, tileH);
+                for (int y = 0; y < tileH; y++)
+                {
+                    System.Array.Copy(block, y * tileW, pixels, y * w + i * tileW, tileW);
+                }
+            }
+            Object.DestroyImmediate(sheet);
+
+            // 不規則柔化遮罩（固定種子：同一個檔名每次結果相同）
+            float seed = (path.GetHashCode() & 0xffff) * 0.37f;
+            for (int x = 0; x < w; x++)
+            {
+                float u = x / (float)tileW;
+                float bottom = tileH * (0.08f + 0.32f * Mathf.PerlinNoise(seed + u * 0.9f, 1.3f)); // 下緣參差（像岩石底部）
+                float top = tileH * (0.02f + 0.05f * Mathf.PerlinNoise(seed + u * 1.7f, 7.1f));    // 頂面微微起伏
+                for (int y = 0; y < tileH; y++)
+                {
+                    float fromBottom = y;
+                    float fromTop = tileH - 1 - y;
+                    float a = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((fromBottom - bottom) / (tileH * 0.12f)));
+                    a *= Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((fromTop - top) / (tileH * 0.05f)));
+                    // 兩端：淡出寬度隨高度不規則變化
+                    float endW = tileW * (0.25f + 0.45f * Mathf.PerlinNoise(seed + y * 0.05f, 3.3f));
+                    float fromEnd = Mathf.Min(x, w - 1 - x);
+                    a *= Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(fromEnd / endW));
+                    var c = pixels[y * w + x];
+                    c.a *= a;
+                    pixels[y * w + x] = c;
+                }
+            }
+
+            var tex = new Texture2D(w, tileH, TextureFormat.RGBA32, false);
+            tex.SetPixels(pixels);
+            tex.Apply();
+            EnsureFolder(SoftPlatformDir);
+            File.WriteAllBytes(path, tex.EncodeToPNG());
+            Object.DestroyImmediate(tex);
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
+            return true;
         }
 
         /// <summary>建立玩家與所有玩家元件。</summary>
@@ -926,7 +1055,7 @@ namespace DrownedDream.EditorTools
         {
             var go = new GameObject($"Enemy_{data.name}") { layer = s_enemyLayer };
             go.transform.SetParent(parent);
-            go.transform.position = feet + Vector2.up * (data.Size.y / 2f); // 碰撞框底部貼地
+            go.transform.position = feet + Vector2.up * (data.Size.y / 2f + data.HoverHeight); // 碰撞框底部貼地（漂浮怪再往上 HoverHeight）
             var body = go.AddComponent<Rigidbody2D>();
             body.bodyType = RigidbodyType2D.Kinematic;
             var col = go.AddComponent<BoxCollider2D>();

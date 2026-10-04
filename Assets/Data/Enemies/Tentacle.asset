@@ -65,3 +65,6 @@ MonoBehaviour:
   _tendrilSprite: {fileID: 21300000, guid: 8baa5a1ae31434b6d960688db4ba2357, type: 3}
   _color: {r: 0.4, g: 0.7, b: 0.35, a: 1}
   _size: {x: 0.8, y: 2}
+  _hoverHeight: 0
+  _bobHeight: 0.08
+  _bobSpeed: 2.5

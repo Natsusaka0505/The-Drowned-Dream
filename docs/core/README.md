@@ -42,7 +42,7 @@ Assets/Scripts/
   Camera/    GameCamera
   World/     Room、Checkpoint、BreathBonusZone、BreathGate、SanityStageObject、PlayerSpawnPoint（關卡起點）、PlatformGroup（平台設 Ground Layer）、SpriteFrameAnimator（逐格動畫）
   Audio/     BgmPlayer、GameAudio（音效 + 環境音）、AmbientEmitter（位置循環音）
-  UI/        HUD、InventoryPanel、StoryPanel、TitleScreen（封面）、TitleButtonHover、HUDWidgets（UIFrameBar 框條 / UIBubbleRow 氧氣泡泡）、SanityScreenEffects、UIFactory
+  UI/        HUD、InventoryPanel、StoryPanel、TitleScreen（封面）、TitleButtonHover、ElfDialog（精靈提示）、TargetArrow（畫面邊緣方向箭頭）、HUDWidgets（UIFrameBar 框條 / UIBubbleRow 氧氣泡泡）、SanityScreenEffects、UIFactory
   Editor/    場景 / 地圖產生器（含地形自動貼圖、關卡 Prefab 範本，見 08-map SD-03）
 ```
 

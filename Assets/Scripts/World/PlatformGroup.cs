@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace DrownedDream
@@ -15,6 +16,15 @@ namespace DrownedDream
         /// <summary>單向平台頂面可站立的角度範圍。</summary>
         [SerializeField] private float _surfaceArc = 160f;
 
+        /// <summary>場上所有平台的碰撞框（背包小地圖畫台階用）。</summary>
+        public static readonly List<Collider2D> AllPlatforms = new List<Collider2D>();
+
+        /// <summary>移除自己登記的平台。</summary>
+        private void OnDestroy()
+        {
+            AllPlatforms.RemoveAll(c => c == null || c.transform.IsChildOf(transform));
+        }
+
         /// <summary>遞迴設定所有子物件的 Layer。</summary>
         private void Awake()
         {
@@ -28,6 +38,7 @@ namespace DrownedDream
 
             // float1~6 的 Tilemap 上掛了 Dynamic 剛體，會受重力往下掉、被玩家推走 → 一律改成 Static
             foreach (var body in GetComponentsInChildren<Rigidbody2D>(true)) body.bodyType = RigidbodyType2D.Static;
+            foreach (var c in GetComponentsInChildren<Collider2D>(true)) if (!c.isTrigger && !AllPlatforms.Contains(c)) AllPlatforms.Add(c);
             if (!_oneWay) return;
 
             foreach (var col in GetComponentsInChildren<Collider2D>(true))

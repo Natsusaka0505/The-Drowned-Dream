@@ -71,8 +71,8 @@ namespace DrownedDream
         [SerializeField] private float _homingSpeed = 3.5f;
         /// <summary>追蹤彈轉向速度（度 / 秒）。</summary>
         [SerializeField] private float _homingTurnRate = 100f;
-        /// <summary>追蹤彈存活秒數。</summary>
-        [SerializeField] private float _homingLifetime = 5f;
+        /// <summary>追蹤彈存活秒數（從畫面外飛進來，要夠久）。</summary>
+        [SerializeField] private float _homingLifetime = 8f;
 
         [Header("觸手掃地")]
         /// <summary>掃地預告秒數。</summary>
@@ -111,8 +111,10 @@ namespace DrownedDream
         [SerializeField] private int _globalLightningCount = 2;
         /// <summary>全圖追蹤彈數量（從玩家上方兩側出現，穿牆）。</summary>
         [SerializeField] private int _globalHomingCount = 2;
-        /// <summary>全圖追蹤彈出現位置相對玩家的距離。</summary>
+        /// <summary>沒有攝影機時，追蹤彈出現位置相對玩家的距離。</summary>
         [SerializeField] private float _globalHomingSpawnDistance = 7f;
+        /// <summary>追蹤彈出現在畫面外多遠（單位）。</summary>
+        [SerializeField] private float _offscreenMargin = 1.5f;
 
         [Header("[待確認] 魚槍傷害")]
         /// <summary>魚槍能否傷害 Boss。</summary>
@@ -252,20 +254,11 @@ namespace DrownedDream
             }
         }
 
-        /// <summary>全圖追蹤彈：從玩家上方左右兩側出現，可穿牆追向玩家。</summary>
+        /// <summary>全圖追蹤彈：從玩家畫面外出現，可穿牆追向玩家。</summary>
         private void GlobalHoming(Player player)
         {
             Debug.Log("[Boss] 全圖攻擊：追蹤彈");
-            Vector2 center = player.transform.position;
-            int count = Mathf.Max(1, _globalHomingCount);
-            for (int i = 0; i < count; i++)
-            {
-                float side = count == 1 ? 0f : (i / (float)(count - 1)) * 2f - 1f; // -1 ~ 1
-                var offset = new Vector2(side, 0.8f).normalized * _globalHomingSpawnDistance;
-                Vector2 pos = center + offset;
-                EnemyProjectile.Spawn(pos, (center - pos).normalized * _homingSpeed, 0.7f, new Color(0.3f, 1f, 0.6f), _damage, 0f,
-                    _homingLifetime, 0, _homingTurnRate);
-            }
+            SpawnOffscreenHoming(player.transform.position, _globalHomingCount);
         }
 
         /// <summary>中斷出招並重置狀態。</summary>
@@ -307,18 +300,39 @@ namespace DrownedDream
             }
         }
 
-        /// <summary>往上方左右兩側射出慢速追蹤彈。</summary>
+        /// <summary>追蹤彈：從玩家畫面外（左上 / 右上方向）出現，朝玩家慢慢轉向追來（可穿牆）。</summary>
         private void FireHoming()
         {
-            Vector2 origin = transform.position;
-            int count = Mathf.Max(1, _homingCount);
+            var player = Player.Instance;
+            if (player != null) SpawnOffscreenHoming(player.transform.position, _homingCount);
+        }
+
+        /// <summary>在畫面外（以玩家為中心的左上 ~ 右上扇形方向，剛好出畫面邊緣）放出追蹤彈，初速朝向玩家。</summary>
+        private void SpawnOffscreenHoming(Vector2 target, int count)
+        {
+            count = Mathf.Max(1, count);
             for (int i = 0; i < count; i++)
             {
-                float t = count == 1 ? 0f : (i / (float)(count - 1) - 0.5f);
-                var dir = (Vector2)(Quaternion.Euler(0f, 0f, t * 120f) * Vector2.up);
-                EnemyProjectile.Spawn(origin + dir, dir * _homingSpeed, 0.7f, new Color(0.3f, 1f, 0.6f), _damage, 0f, _homingLifetime,
-                    _projectileBlockMask, _homingTurnRate);
+                float side = count == 1 ? 0f : (i / (float)(count - 1)) * 2f - 1f; // -1 ~ 1
+                var dir = new Vector2(side, 0.8f).normalized;
+                Vector2 pos = OffscreenPoint(target, dir);
+                EnemyProjectile.Spawn(pos, (target - pos).normalized * _homingSpeed, 0.7f, new Color(0.3f, 1f, 0.6f), _damage, 0f,
+                    _homingLifetime, 0, _homingTurnRate);
             }
+        }
+
+        /// <summary>從 from 沿 dir 往外延伸到攝影機畫面外（多 _offscreenMargin）的位置；沒有攝影機時用固定距離。</summary>
+        private Vector2 OffscreenPoint(Vector2 from, Vector2 dir)
+        {
+            var cam = Camera.main;
+            if (cam == null || !cam.orthographic) return from + dir * _globalHomingSpawnDistance;
+            Vector2 center = cam.transform.position;
+            float halfH = cam.orthographicSize + _offscreenMargin;
+            float halfW = cam.orthographicSize * cam.aspect + _offscreenMargin;
+            // 從畫面中心沿 dir 打到外框（加邊距）
+            float t = Mathf.Min(Mathf.Abs(dir.x) > 0.001f ? halfW / Mathf.Abs(dir.x) : float.MaxValue,
+                                Mathf.Abs(dir.y) > 0.001f ? halfH / Mathf.Abs(dir.y) : float.MaxValue);
+            return center + dir * t;
         }
 
         /// <summary>觸手掃地：預告整條地面，再由 Boss 這側往另一側掃過。</summary>

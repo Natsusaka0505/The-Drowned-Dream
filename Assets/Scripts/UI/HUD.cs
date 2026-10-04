@@ -18,6 +18,14 @@ namespace DrownedDream
         /// <summary>頭像框寬度（高度依框圖比例）。</summary>
         [SerializeField] private float _portraitWidth = 166f;
 
+        [Header("魚叉數量（右上角）")]
+        /// <summary>魚叉圖示（每支一個，用掉的變半透明）。</summary>
+        [SerializeField] private Sprite _harpoonSprite;
+
+        [Header("精靈提示")]
+        /// <summary>精靈圖（進 Boss 房前的提示由精靈說）。</summary>
+        [SerializeField] private Sprite _elfSprite;
+
         [Header("HP / SAN 框與填充條")]
         /// <summary>HP 框圖。</summary>
         [SerializeField] private Sprite _hpFrame;
@@ -44,8 +52,18 @@ namespace DrownedDream
         private UIFrameBar _sanity;
         /// <summary>氧氣泡泡列。</summary>
         private UIBubbleRow _oxygen;
-        /// <summary>魚叉數文字。</summary>
+        /// <summary>精靈對話框。</summary>
+        private ElfDialog _elf;
+        /// <summary>最後封印道具的方向箭頭。</summary>
+        private TargetArrow _finalSealArrow;
+        /// <summary>是否已進過 Boss 房（之後提示改為一般文字，不再由精靈說）。</summary>
+        private bool _bossMode;
+        /// <summary>魚叉數文字（沒有圖示時使用）。</summary>
         private Text _harpoonText;
+        /// <summary>魚叉圖示列的容器（右上角）。</summary>
+        private RectTransform _harpoonRow;
+        /// <summary>各支魚叉圖示。</summary>
+        private readonly System.Collections.Generic.List<Image> _harpoonIcons = new System.Collections.Generic.List<Image>();
         /// <summary>封印進度文字。</summary>
         private Text _sealText;
         /// <summary>提示訊息文字。</summary>
@@ -71,12 +89,16 @@ namespace DrownedDream
 
             var harpoonRt = UIFactory.Rect("Harpoons", root, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-30f, -30f), new Vector2(500f, 40f));
             _harpoonText = UIFactory.Text(harpoonRt, "", 26, TextAnchor.UpperRight, Color.white);
+            _harpoonRow = UIFactory.Rect("HarpoonIcons", root, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-30f, -20f), new Vector2(500f, 70f));
 
-            var sealRt = UIFactory.Rect("Seals", root, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-30f, -75f), new Vector2(600f, 40f));
+            var sealRt = UIFactory.Rect("Seals", root, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-30f, -100f), new Vector2(600f, 40f)); // 魚叉圖示列下方
             _sealText = UIFactory.Text(sealRt, "", 24, TextAnchor.UpperRight, new Color(1f, 0.9f, 0.6f));
 
             var msgRt = UIFactory.Rect("Message", root, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 90f), new Vector2(1400f, 60f));
             _messageText = UIFactory.Text(msgRt, "", 30, TextAnchor.MiddleCenter, new Color(1f, 0.95f, 0.8f));
+
+            _elf = new ElfDialog(root, _elfSprite);
+            _finalSealArrow = new TargetArrow(root, new Color(1f, 0.35f, 0.75f));
 
             var helpRt = UIFactory.Rect("Help", root, new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(30f, 20f), new Vector2(1400f, 30f));
             UIFactory.Text(helpRt, "A/D 移動  W 跳  S 穿過平台往下  Space 魚叉  K 憋氣  E 互動  Tab 背包", 18, TextAnchor.LowerLeft, new Color(1f, 1f, 1f, 0.5f));
@@ -100,11 +122,26 @@ namespace DrownedDream
             face.enabled = _portrait != null;
         }
 
-        /// <summary>訂閱提示訊息。</summary>
-        private void OnEnable() => GameEvents.MessageRequested += ShowMessage;
+        /// <summary>訂閱提示訊息與 Boss 現身。</summary>
+        private void OnEnable()
+        {
+            GameEvents.MessageRequested += ShowMessage;
+            GameEvents.BossRevealed += OnBossRevealed;
+        }
 
-        /// <summary>取消訂閱提示訊息。</summary>
-        private void OnDisable() => GameEvents.MessageRequested -= ShowMessage;
+        /// <summary>取消訂閱。</summary>
+        private void OnDisable()
+        {
+            GameEvents.MessageRequested -= ShowMessage;
+            GameEvents.BossRevealed -= OnBossRevealed;
+        }
+
+        /// <summary>第一次進 Boss 房：精靈退場，之後提示改為一般文字。</summary>
+        private void OnBossRevealed()
+        {
+            _bossMode = true;
+            _elf.Hide();
+        }
 
         /// <summary>訂閱玩家數值事件並同步初始值。</summary>
         private void Start()
@@ -136,8 +173,32 @@ namespace DrownedDream
         /// <summary>更新封印進度。</summary>
         private void OnSeals(int count, int required) => _sealText.text = $"封印  {count} / {required}";
 
-        /// <summary>更新魚叉數。</summary>
-        private void OnAmmo(int a, int m) => _harpoonText.text = $"魚叉  {new string('■', a)}{new string('□', m - a)}";
+        /// <summary>更新魚叉數：每支一個斜放的魚叉圖示（由右往左排），用掉的變半透明；沒有圖時用文字。</summary>
+        private void OnAmmo(int a, int m)
+        {
+            if (_harpoonSprite == null)
+            {
+                _harpoonText.text = $"魚叉  {new string('■', a)}{new string('□', m - a)}";
+                return;
+            }
+            _harpoonText.text = "";
+            while (_harpoonIcons.Count < m)
+            {
+                int i = _harpoonIcons.Count;
+                var rt = UIFactory.Rect($"Harpoon{i}", _harpoonRow, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(0.5f, 0.5f),
+                    new Vector2(-30f - i * 34f, 0f), new Vector2(84f, 15f));
+                rt.localRotation = Quaternion.Euler(0f, 0f, 55f); // 斜放，像美術原圖
+                var img = UIFactory.Image(rt, Color.white);
+                img.sprite = _harpoonSprite;
+                img.preserveAspect = true;
+                _harpoonIcons.Add(img);
+            }
+            for (int i = 0; i < _harpoonIcons.Count; i++)
+            {
+                _harpoonIcons[i].gameObject.SetActive(i < m);
+                _harpoonIcons[i].color = i < a ? Color.white : new Color(1f, 1f, 1f, 0.2f); // 右邊起算：還在手上的是實心
+            }
+        }
 
         /// <summary>更新數值條 / 泡泡動畫並淡出提示訊息。</summary>
         private void Update()
@@ -146,6 +207,8 @@ namespace DrownedDream
             _hp.Tick(dt);
             _sanity.Tick(dt);
             _oxygen.Tick(dt);
+            _elf.Tick(dt);
+            _finalSealArrow.Tick();
 
             if (_messageTimer > 0f)
             {
@@ -156,9 +219,14 @@ namespace DrownedDream
             }
         }
 
-        /// <summary>顯示提示訊息。</summary>
+        /// <summary>顯示提示訊息：進 Boss 房前由精靈說（左下對話框），之後用畫面下方一般文字。</summary>
         private void ShowMessage(string text, float duration)
         {
+            if (!_bossMode)
+            {
+                _elf.Show(text, duration);
+                return;
+            }
             _messageText.text = text;
             _messageTimer = duration;
             var c = _messageText.color;

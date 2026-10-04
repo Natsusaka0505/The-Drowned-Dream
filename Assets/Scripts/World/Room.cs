@@ -31,6 +31,10 @@ namespace DrownedDream
         public string DisplayName => _displayName;
         /// <summary>區塊世界座標邊界。</summary>
         public Bounds Bounds => _bounds.bounds;
+        /// <summary>玩家是否來過（背包小地圖只顯示去過的區塊）。</summary>
+        public bool Visited { get; private set; }
+        /// <summary>場上所有區塊（小地圖用，唯讀）。</summary>
+        public static IReadOnlyList<Room> All => s_all;
 
         /// <summary>玩家進入此區塊。</summary>
         public event Action PlayerEntered;
@@ -82,6 +86,7 @@ namespace DrownedDream
         private void OnTriggerEnter2D(Collider2D other)
         {
             if (!IsPlayer(other) || s_occupied.Contains(this)) return;
+            Visited = true;
             s_occupied.Add(this);
             PlayerEntered?.Invoke();
             CurrentChanged?.Invoke(this);

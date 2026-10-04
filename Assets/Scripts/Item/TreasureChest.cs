@@ -49,8 +49,47 @@ namespace DrownedDream
         /// <summary>道具飛向玩家的秒數。</summary>
         [SerializeField] private float _itemFlyTime = 0.3f;
 
+        [Header("精靈台詞（開寶箱取得道具時隨機說一句）")]
+        /// <summary>開出繃帶（回 HP）時的台詞。</summary>
+        [SerializeField] private string[] _hpLines =
+        {
+            "這捲繃帶還很新……是誰留在這裡的呢？",
+            "受傷了就纏一纏吧，我幫你盯著四周！",
+            "海水泡到傷口會很痛喔，忍耐一下～",
+            "繃帶上有奇怪的符號……先別想太多。",
+        };
+        /// <summary>開出藥丸（回 SAN）時的台詞。</summary>
+        [SerializeField] private string[] _sanityLines =
+        {
+            "吃下去，腦袋裡的低語會安靜一點。",
+            "藥丸？……希望不是過期的。",
+            "你的眼神有點飄喔，快吃一顆吧！",
+            "嗯？罐子上的字一直在動……沒事沒事！",
+        };
+        /// <summary>開出邪神雕像（封印道具）時的台詞。</summary>
+        [SerializeField] private string[] _sealLines =
+        {
+            "就是它！封印需要的雕像！",
+            "這尊雕像……好像在看著我們。",
+            "雕像冰冰的，卻又在微微發熱……",
+            "再多找幾尊，就能把那傢伙封起來了！",
+        };
+        /// <summary>其他道具的台詞。</summary>
+        [SerializeField] private string[] _otherLines =
+        {
+            "找到東西了！",
+            "這個箱子比看起來還重呢。",
+        };
+
         /// <summary>是否已打開。</summary>
         public bool IsOpened { get; private set; }
+        /// <summary>是否為最後一個封印道具（第一次進 Boss 房後才出現，小地圖 / 方向箭頭會特別標示）。</summary>
+        public bool IsFinalSeal { get; set; }
+        /// <summary>內容物 Prefab（小地圖依類型上色）。</summary>
+        public PickupItem ItemPrefab => _itemPrefab;
+
+        /// <summary>場景中所有寶箱（含已打開，小地圖用）。</summary>
+        public static readonly List<TreasureChest> All = new List<TreasureChest>();
 
         #endregion
 
@@ -58,10 +97,24 @@ namespace DrownedDream
         private void OnEnable()
         {
             if (!IsOpened && !s_closed.Contains(this)) s_closed.Add(this);
+            if (!All.Contains(this)) All.Add(this);
         }
 
         /// <summary>從清單移除。</summary>
-        private void OnDisable() => s_closed.Remove(this);
+        private void OnDisable()
+        {
+            s_closed.Remove(this);
+            All.Remove(this);
+        }
+
+        /// <summary>依內容物挑一句精靈台詞。</summary>
+        private string PickLine(PickupItem item)
+        {
+            string[] lines = _otherLines;
+            if (item is SealItem) lines = _sealLines;
+            else if (item is RecoveryItem r) lines = r.HpRestore > 0d ? _hpLines : r.SanityRestore > 0d ? _sanityLines : _otherLines;
+            return lines != null && lines.Length > 0 ? lines[Random.Range(0, lines.Length)] : null;
+        }
 
         /// <summary>設定為關閉圖。</summary>
         private void Awake()
@@ -159,7 +212,14 @@ namespace DrownedDream
                     item.transform.localScale = itemScale * Mathf.Lerp(1f, 0.5f, k);
                     yield return null;
                 }
-                if (pickup.TryPickUp(item)) yield break;
+                string line = PickLine(item);
+                string itemName = item.DisplayName;
+                if (pickup.TryPickUp(item))
+                {
+                    // 蓋過道具本身的拾取提示：精靈隨機說一句 + 取得什麼（進 Boss 房後 HUD 會改成一般文字）
+                    if (!string.IsNullOrEmpty(line)) GameEvents.ShowMessage($"{line}\n——取得 {itemName}", 3f);
+                    yield break;
+                }
             }
 
             // 玩家無法取得（例如已死亡）：道具留在箱子上方，恢復成一般可撿道具

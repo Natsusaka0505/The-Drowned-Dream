@@ -52,11 +52,14 @@ MonoBehaviour:
   _sanityRestoreOnKill: 25
   _dropPrefab: {fileID: 0}
   _dropChance: 1
+  _hoverHeight: 0
+  _bobHeight: 0.08
+  _bobSpeed: 2.5
   _animFrames:
-  - {fileID: 21300000, guid: a8b3a166bf38948b3961a962cce1f519, type: 3}
-  - {fileID: 21300000, guid: 26fa65905466c420e9b4396809fffbd4, type: 3}
-  - {fileID: 21300000, guid: 45af264ee21954a45beefacc4fb70b2f, type: 3}
-  - {fileID: 21300000, guid: 8de1b1cc6cd4d41a98b5dd3cccb2ae69, type: 3}
+  - {fileID: 21300000, guid: fb9afde8d8a1740909a329a02df79b39, type: 3}
+  - {fileID: 21300000, guid: 87882aeb1ad994b9bb3862e7f1ec399b, type: 3}
+  - {fileID: 21300000, guid: 9a5201d4875104fdbae38375f9fdf2da, type: 3}
+  - {fileID: 21300000, guid: c26be0995db264fd1826e1f7bf6c3d97, type: 3}
   _animDurations:
   - 2.2
   - 0.05
