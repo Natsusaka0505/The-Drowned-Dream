@@ -89,3 +89,24 @@
 
 `[待確認]` 用途為開發依檔名與波形判讀，請音效試聽確認。
 
+## 原始素材副本（`source/`）
+
+2026-10-04 從 `ArtSource/` 複製，**僅供查閱**。程式、`Tools/` 腳本與其他文件的引用一律以原位置 `ArtSource/` 為準；換素材時改 `ArtSource/` 原檔，再同步這裡的副本。音效路徑相對 `Assets/Audio/`。
+
+| 副本 | 原檔（引用位置） | 用途 |
+|---|---|---|
+| [`raw_jump.mp3`](source/raw_jump.mp3) | `ArtSource/Audio/raw_jump.mp3` | 跳躍 → `SFX/sfx_jump.wav` |
+| [`raw_land.mp3`](source/raw_land.mp3) | `ArtSource/Audio/raw_land.mp3` | 落地 → `SFX/sfx_land.wav` |
+| [`raw_wading.mp3`](source/raw_wading.mp3) | `ArtSource/Audio/raw_wading.mp3` | 腳步涉水（循環）→ `SFX/sfx_footsteps_water_loop.wav` |
+
+## 遊戲圖片副本（`art/`）
+
+2026-10-04 從 `Assets/Art/` 複製（保留原子資料夾結構），**僅供查閱**。Unity 場景、程式與其他文件的引用一律以原位置 `Assets/Art/` 為準；換圖時改 `Assets/Art/` 原檔，再同步這裡的副本。
+
+| 副本 | 原檔（引用位置） | 張數 | 用途 |
+|---|---|---|---|
+| [`art/Player/*.png`](art/Player/) | `Assets/Art/Player/*.png` | 26 | 主角走路 / 跳躍畫格 |
+| [`art/UI/title_cover.png`](art/UI/) | `Assets/Art/UI/title_cover.png` | 1 | 封面 |
+| [`art/UI/btn_*.png`](art/UI/) | `Assets/Art/UI/btn_*.png` | 2 | 封面按鈕 |
+| [`art/UI/HUD/hud_hp_*.png`](art/UI/HUD/) | `Assets/Art/UI/HUD/hud_hp_*.png` | 2 | HP 框與填充條 |
+| [`art/UI/HUD/hud_portrait*.png`](art/UI/HUD/) | `Assets/Art/UI/HUD/hud_portrait*.png` | 2 | 玩家頭像與相框 |

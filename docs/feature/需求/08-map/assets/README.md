@@ -34,3 +34,25 @@
 - 3×3 每塊**等大**（目前約 310 px 但不完全一致，切的時候被拉成正方形）。
 - 素材表上方深色帶（V 形裂紋）、底部小突起、右欄三角形、巨石、火炬、斷裂石板的用途（地板頂面？斜坡？道具？）——目前未使用。
 
+## 原始素材副本（`source/`）
+
+2026-10-04 從 `ArtSource/` 複製，**僅供查閱**。程式、`Tools/` 腳本與其他文件的引用一律以原位置 `ArtSource/` 為準；換素材時改 `ArtSource/` 原檔，再同步這裡的副本。音效路徑相對 `Assets/Audio/`。
+
+| 副本 | 原檔（引用位置） | 用途 |
+|---|---|---|
+| [`map_objects.png`](source/map_objects.png) | `ArtSource/map_objects.png` | 地圖物件表 → 寶箱 `Assets/Art/Chests/` |
+| [`raw_horror_wind.mp3`](source/raw_horror_wind.mp3) | `ArtSource/Audio/raw_horror_wind.mp3` | 洞窟風聲 → `Ambience/amb_cave_wind.wav` |
+| [`terrain_sheet.jpg`](source/terrain_sheet.jpg) | `ArtSource/terrain_sheet.jpg` | 地板素材表 → `Tools/slice_terrain_sheet.py` 切成 `Assets/Art/Map/Terrain/` |
+
+## 遊戲圖片副本（`art/`）
+
+2026-10-04 從 `Assets/Art/` 複製（保留原子資料夾結構），**僅供查閱**。Unity 場景、程式與其他文件的引用一律以原位置 `Assets/Art/` 為準；換圖時改 `Assets/Art/` 原檔，再同步這裡的副本。
+
+| 副本 | 原檔（引用位置） | 張數 | 用途 |
+|---|---|---|---|
+| [`art/Background/*.png`](art/Background/) | `Assets/Art/Background/*.png` | 3 | 遠景背景 |
+| [`art/Map/*.png`](art/Map/) | `Assets/Art/Map/*.png` | 2 | 地圖 / 碰撞遮罩 placeholder |
+| [`art/Map/Terrain/*.png`](art/Map/Terrain/) | `Assets/Art/Map/Terrain/*.png` | 12 | 地形 3×3 與裝飾 |
+| [`art/Map-rock/*.png`](art/Map-rock/) | `Assets/Art/Map-rock/*.png` | 6 | 岩石 / 牆 |
+| [`art/Platforms/*.png`](art/Platforms/) | `Assets/Art/Platforms/*.png` | 19 | 浮動平台 |
+| [`art/image/*.png`](art/image/) | `Assets/Art/image/*.png` | 2 | 浮動平台原圖 |
