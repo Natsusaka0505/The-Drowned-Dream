@@ -27,6 +27,14 @@ namespace DrownedDream
         public static event Action BossActivated;
         /// <summary>全畫面閃白（參數：淡出秒數）。</summary>
         public static event Action<float> ScreenFlashRequested;
+        /// <summary>一座封印祭壇被啟動（鎖鏈音效）。</summary>
+        public static event Action AltarActivated;
+        /// <summary>敵人剛發現玩家（未偵測 → 偵測）。</summary>
+        public static event Action PlayerDetected;
+        /// <summary>Boss 放出追蹤彈。</summary>
+        public static event Action BossHomingFired;
+        /// <summary>Boss 落雷落下（每一道）。</summary>
+        public static event Action BossLightningStruck;
 
         /// <summary>顯示畫面提示文字。</summary>
         public static void ShowMessage(string text, float duration = 2.5f) => MessageRequested?.Invoke(text, duration);
@@ -50,5 +58,13 @@ namespace DrownedDream
         public static void RaiseBossActivated() => BossActivated?.Invoke();
         /// <summary>要求全畫面閃白。</summary>
         public static void RaiseScreenFlash(float fadeSeconds) => ScreenFlashRequested?.Invoke(fadeSeconds);
+        /// <summary>發出祭壇啟動事件。</summary>
+        public static void RaiseAltarActivated() => AltarActivated?.Invoke();
+        /// <summary>發出敵人發現玩家事件。</summary>
+        public static void RaisePlayerDetected() => PlayerDetected?.Invoke();
+        /// <summary>發出 Boss 追蹤彈事件。</summary>
+        public static void RaiseBossHomingFired() => BossHomingFired?.Invoke();
+        /// <summary>發出 Boss 落雷落下事件。</summary>
+        public static void RaiseBossLightningStruck() => BossLightningStruck?.Invoke();
     }
 }

@@ -23,6 +23,8 @@ namespace DrownedDream
         [SerializeField] private Sprite _elfSprite;
         /// <summary>精靈在場景中的高度（單位）。</summary>
         [SerializeField] private float _elfHeight = 1.4f;
+        /// <summary>海兔從玩家頭上跳到身旁的秒數（場景有 SeaHare 時）。</summary>
+        [SerializeField] private float _leaveHeadSeconds = 0.6f;
         /// <summary>第一句台詞（精靈在玩家身旁說）。</summary>
         [SerializeField] private string _tauntLine1 = "終於上當了……";
         /// <summary>第二句（玩家已集齊雕像時，飛向 Boss 位置途中說）。</summary>
@@ -113,7 +115,29 @@ namespace DrownedDream
             var cam = GameCamera.Instance;
             Vector2 start = (Vector2)player.transform.position + new Vector2(-1.2f, 1.6f);
             Vector2 target = _boss.transform.position;
-            var elf = SpawnElf(start, out var elfLight);
+            Transform elf;
+            Light2D elfLight;
+            var hare = SeaHare.Instance;
+            if (hare != null)
+            {
+                // 0. 海兔從玩家頭上跳下來，邊跳邊放大到演出大小
+                elf = hare.LeaveHead(30);
+                elfLight = AddElfLight(elf.gameObject);
+                Vector2 from = elf.position;
+                Vector3 fromScale = elf.localScale;
+                Vector3 toScale = Vector3.one * (_elfHeight / Mathf.Max(0.01f, hare.SpriteHeight));
+                for (float t = 0f; t < _leaveHeadSeconds; t += Time.deltaTime)
+                {
+                    float k = Mathf.SmoothStep(0f, 1f, t / _leaveHeadSeconds);
+                    elf.position = Vector2.Lerp(from, start, k) + Vector2.up * (Mathf.Sin(k * Mathf.PI) * 1f);
+                    elf.localScale = Vector3.Lerp(fromScale, toScale, k);
+                    yield return null;
+                }
+            }
+            else
+            {
+                elf = SpawnElf(start, out elfLight);
+            }
 
             // 1. 精靈在玩家身旁
             GameEvents.ShowMessage(_tauntLine1, _lineSeconds);
@@ -163,7 +187,7 @@ namespace DrownedDream
             if (PlayerInside) AnnounceAndActivate(player);
         }
 
-        /// <summary>在場景中產生精靈（帶一盞白光），回傳 Transform；沒有精靈圖時回傳 null（演出照常進行）。</summary>
+        /// <summary>在場景中產生精靈（場景沒有海兔時的備案，帶一盞白光），回傳 Transform；沒有精靈圖時回傳 null（演出照常進行）。</summary>
         private Transform SpawnElf(Vector2 position, out Light2D light)
         {
             light = null;
@@ -175,12 +199,19 @@ namespace DrownedDream
             sr.sortingOrder = 30; // 在 Boss、浮岩、玩家前面
             float h = _elfSprite.bounds.size.y;
             if (h > 0f) go.transform.localScale = Vector3.one * (_elfHeight / h);
-            light = go.AddComponent<Light2D>();
+            light = AddElfLight(go);
+            return go.transform;
+        }
+
+        /// <summary>幫精靈加一盞白光（變身時調亮）。</summary>
+        private static Light2D AddElfLight(GameObject go)
+        {
+            var light = go.AddComponent<Light2D>();
             light.lightType = Light2D.LightType.Point;
             light.color = new Color(0.8f, 0.95f, 1f);
             light.intensity = 1f;
             light.pointLightOuterRadius = 3f;
-            return go.transform;
+            return light;
         }
 
         /// <summary>精靈在 center 附近輕輕上下飄 seconds 秒（elf 為 null 時只等待）。</summary>

@@ -57,7 +57,11 @@ namespace DrownedDream
         public void SetMoving(bool moving) => IsMoving = moving;
 
         /// <summary>設定是否偵測到玩家（由 EnemyAI 呼叫）。</summary>
-        public void SetPlayerDetected(bool detected) => PlayerDetected = detected;
+        public void SetPlayerDetected(bool detected)
+        {
+            if (detected && !PlayerDetected) GameEvents.RaisePlayerDetected(); // 剛發現玩家（音效）
+            PlayerDetected = detected;
+        }
 
         /// <summary>設定移動速度（巡邏 / 追擊切換）。</summary>
         public void SetMoveSpeed(double speed) => MoveSpeed = Math.Max(0d, speed);

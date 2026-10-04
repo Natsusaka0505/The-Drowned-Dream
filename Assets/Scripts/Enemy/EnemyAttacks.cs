@@ -446,6 +446,8 @@ namespace DrownedDream
         private float _fxLifetime;
         /// <summary>特效是否已播放。</summary>
         private bool _fxPlayed;
+        /// <summary>判定開始（落下）時的回呼（可空，例如落雷音效）。</summary>
+        private System.Action _onStrike;
         /// <summary>地刺外觀（WithSpikes 設定後才有）。</summary>
         private SpriteRenderer[] _spikes;
         /// <summary>各地刺的完整高度。</summary>
@@ -500,6 +502,13 @@ namespace DrownedDream
             _fxPrefab = fxPrefab;
             _fxWidth = fxWidth;
             _fxLifetime = lifetime;
+            return this;
+        }
+
+        /// <summary>設定判定開始（落下）時呼叫的回呼。</summary>
+        public TelegraphStrike OnStrike(System.Action onStrike)
+        {
+            _onStrike = onStrike;
             return this;
         }
 
@@ -664,6 +673,7 @@ namespace DrownedDream
         private void PlayFx()
         {
             _fxPlayed = true;
+            _onStrike?.Invoke();
             if (_fxPrefab == null) return;
             bool alongX = _size.x > _size.y;
             float length = alongX ? _size.x : _size.y;

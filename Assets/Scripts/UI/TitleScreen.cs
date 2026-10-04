@@ -110,13 +110,6 @@ namespace DrownedDream
         }
 
         /// <summary>結束遊戲（Editor 中停止 Play）。</summary>
-        private void Quit()
-        {
-#if UNITY_EDITOR
-            UnityEditor.EditorApplication.isPlaying = false;
-#else
-            Application.Quit();
-#endif
-        }
+        private void Quit() => GameFlow.QuitGame();
     }
 }

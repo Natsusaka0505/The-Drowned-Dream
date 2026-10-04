@@ -358,7 +358,8 @@ namespace DrownedDream
                 int step = (i + 1) / 2 * (i % 2 == 1 ? 1 : -1);
                 float x = Mathf.Clamp(baseX + step * _lightningSpacing, b.min.x + _lightningWidth, b.max.x - _lightningWidth);
                 TelegraphStrike.Spawn(new Vector2(x, b.center.y), new Vector2(_lightningWidth, b.size.y), 0f, new Color(1f, 1f, 0.6f),
-                    _lightningWarn, _lightningActive, _damage, 0f).WithFx(_lightningFx, _lightningFxWidth, _lightningFxTime);
+                    _lightningWarn, _lightningActive, _damage, 0f).WithFx(_lightningFx, _lightningFxWidth, _lightningFxTime)
+                    .OnStrike(GameEvents.RaiseBossLightningStruck);
                 yield return new WaitForSeconds(_lightningStagger);
             }
         }
@@ -421,6 +422,7 @@ namespace DrownedDream
         private void SpawnOffscreenHoming(Vector2 target, int count)
         {
             count = Mathf.Max(1, count);
+            GameEvents.RaiseBossHomingFired();
             for (int i = 0; i < count; i++)
             {
                 float side = count == 1 ? 0f : (i / (float)(count - 1)) * 2f - 1f; // -1 ~ 1
@@ -473,7 +475,8 @@ namespace DrownedDream
                 int step = (i + 1) / 2 * (i % 2 == 1 ? 1 : -1);
                 float x = Mathf.Clamp(baseX + step * _lightningSpacing, b.min.x + _lightningWidth, b.max.x - _lightningWidth);
                 TelegraphStrike.Spawn(new Vector2(x, floorY + height / 2f), new Vector2(_lightningWidth, height), 0f, new Color(1f, 1f, 0.6f),
-                    _lightningWarn, _lightningActive, _damage, 0f).WithFx(_lightningFx, _lightningFxWidth, _lightningFxTime);
+                    _lightningWarn, _lightningActive, _damage, 0f).WithFx(_lightningFx, _lightningFxWidth, _lightningFxTime)
+                    .OnStrike(GameEvents.RaiseBossLightningStruck);
                 yield return new WaitForSeconds(_lightningStagger);
             }
             yield return new WaitForSeconds(_lightningWarn + _lightningActive);

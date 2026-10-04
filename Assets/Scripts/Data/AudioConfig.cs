@@ -78,6 +78,10 @@ namespace DrownedDream
         [SerializeField] private SfxEntry _breathHold = new SfxEntry(0.7f);
         /// <summary>使用回復道具</summary>
         [SerializeField] private SfxEntry _eat = new SfxEntry(1f);
+        /// <summary>主角受擊</summary>
+        [SerializeField] private SfxEntry _playerHurt = new SfxEntry(0.9f, cooldown: 0.2f);
+        /// <summary>重生復活</summary>
+        [SerializeField] private SfxEntry _respawn = new SfxEntry(0.7f, pitchJitter: 0f, cooldown: 1f);
 
         [Header("敵人 / Boss")]
         /// <summary>魚叉命中敵人</summary>
@@ -88,6 +92,14 @@ namespace DrownedDream
         [SerializeField] private SfxEntry _bossRoar = new SfxEntry(0.9f, pitchJitter: 0f, cooldown: 6f);
         /// <summary>封印完成（預設借用 Boss 咆哮、音高壓低）</summary>
         [SerializeField] private SfxEntry _sealComplete = new SfxEntry(1f, pitch: 0.7f, pitchJitter: 0f, cooldown: 1f);
+        /// <summary>被怪物偵測到（多隻同時發現只響一次）</summary>
+        [SerializeField] private SfxEntry _detected = new SfxEntry(0.8f, cooldown: 3f);
+        /// <summary>啟動封印祭壇（鎖鏈）</summary>
+        [SerializeField] private SfxEntry _sealChain = new SfxEntry(1f, pitchJitter: 0f, cooldown: 0.5f);
+        /// <summary>Boss 追蹤彈</summary>
+        [SerializeField] private SfxEntry _bossHoming = new SfxEntry(0.7f, cooldown: 0.5f);
+        /// <summary>Boss 落雷（每道都響，冷卻略短於落雷間隔）</summary>
+        [SerializeField] private SfxEntry _bossLightning = new SfxEntry(0.8f, cooldown: 0.15f);
 
         [Header("SAN")]
         /// <summary>低語（精神錯亂預告）</summary>
@@ -131,6 +143,10 @@ namespace DrownedDream
         public SfxEntry BreathHold => _breathHold;
         /// <summary>使用回復道具（唯讀）</summary>
         public SfxEntry Eat => _eat;
+        /// <summary>主角受擊（唯讀）</summary>
+        public SfxEntry PlayerHurt => _playerHurt;
+        /// <summary>重生復活（唯讀）</summary>
+        public SfxEntry Respawn => _respawn;
         /// <summary>魚叉命中敵人（唯讀）</summary>
         public SfxEntry HarpoonHit => _harpoonHit;
         /// <summary>擊殺（唯讀）</summary>
@@ -139,6 +155,14 @@ namespace DrownedDream
         public SfxEntry BossRoar => _bossRoar;
         /// <summary>封印完成（唯讀）</summary>
         public SfxEntry SealComplete => _sealComplete;
+        /// <summary>被怪物偵測到（唯讀）</summary>
+        public SfxEntry Detected => _detected;
+        /// <summary>啟動封印祭壇（唯讀）</summary>
+        public SfxEntry SealChain => _sealChain;
+        /// <summary>Boss 追蹤彈（唯讀）</summary>
+        public SfxEntry BossHoming => _bossHoming;
+        /// <summary>Boss 落雷（唯讀）</summary>
+        public SfxEntry BossLightning => _bossLightning;
         /// <summary>低語（唯讀）</summary>
         public SfxEntry Whisper => _whisper;
         /// <summary>驚嚇（唯讀）</summary>

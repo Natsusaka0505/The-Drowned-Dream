@@ -127,6 +127,12 @@ namespace DrownedDream.EditorTools
             ("_sealComplete", "Assets/Audio/SFX/sfx_boss_roar.wav", false),
             ("_whisper", "Assets/Audio/SFX/sfx_whisper.wav", false),
             ("_jumpScare", "Assets/Audio/SFX/sfx_jumpscare.wav", false),
+            ("_playerHurt", "Assets/Audio/SFX/sfx_player_hurt.wav", false),
+            ("_respawn", "Assets/Audio/SFX/sfx_respawn.wav", false),
+            ("_detected", "Assets/Audio/SFX/sfx_detected.wav", false),
+            ("_sealChain", "Assets/Audio/SFX/sfx_seal_chain.wav", false),
+            ("_bossHoming", "Assets/Audio/SFX/sfx_boss_homing.wav", false),
+            ("_bossLightning", "Assets/Audio/SFX/sfx_boss_lightning.wav", false),
             ("_footsteps", "Assets/Audio/SFX/sfx_footsteps_water_loop.wav", true),
             ("_caveWind", "Assets/Audio/Ambience/amb_cave_wind.wav", true),
             ("_lowSanity", "Assets/Audio/Ambience/amb_low_sanity.wav", true),
@@ -367,6 +373,7 @@ namespace DrownedDream.EditorTools
                     ("_lookSprite", AssetDatabase.LoadAssetAtPath<Sprite>(ImportSprite($"{EnemyArtDir}/eye_iris.png", 100, SpriteAlignment.Center))));
                 EditorUtility.SetDirty(d.Eye);
             }
+            AssignEyeFlowerArt(d.Eye); // 2026-10-04 眼花：整張圖依玩家方向切格（優先於眼白 + 瞳孔 + 眼皮）
             AssignEnemyArt(d.Tentacle, "seabutterfly", 5, new[] { 0.12f, 0.12f, 0.12f, 0.12f, 0.12f }, // 拍翅（2026-10-04 換成美術新圖 5 格）
                 AssetDatabase.LoadAssetAtPath<Sprite>(ImportSprite($"{EnemyArtDir}/tendril.png", 32, SpriteAlignment.LeftCenter)));
             if (d.Eye.BeamFx == null)
@@ -531,6 +538,7 @@ namespace DrownedDream.EditorTools
 
             var flow = new GameObject("GameFlow").AddComponent<GameFlow>();
             Wire(flow, ("_titleScreen", title), ("_storyPanel", story));
+            WireEnding(flow, story); // 結局插圖 + Quit 按鈕圖
 
             BuildBgm();
 
@@ -908,6 +916,7 @@ namespace DrownedDream.EditorTools
             Wire(go.GetComponent<PlayerMove>(), ("_groundMask", Mask(s_groundLayer)), ("_visual", visual)); // 有美術畫格時 visual = null（不翻轉）
             Wire(go.GetComponent<PlayerBreath>(), ("_config", d.Breath), ("_fadeRenderers", renderers));
             Wire(go.GetComponent<PlayerAttack>(), ("_harpoonPrefab", harpoonPrefab));
+            EnsureSeaHare(go.GetComponent<Player>()); // 頭上的海兔（精靈本體）
             return go;
         }
 
@@ -1128,7 +1137,12 @@ namespace DrownedDream.EditorTools
             col.isTrigger = true;
             SpriteRenderer sr;
             var frames = data.AnimFrames;
-            if (data.BaseSprite != null)
+            if (data.LookFrames != null && data.LookFrames.Length >= 5 && data.LookFrames[0] != null)
+            {
+                // 整張圖追視（眼花）：依玩家方向切換畫格
+                sr = MakeLookFrameVisual(go.transform, data, 10);
+            }
+            else if (data.BaseSprite != null)
             {
                 // 分層：底層（眼白，受擊閃白用這層）→ 追視層（瞳孔）→ 畫格層（眼皮眨眼）
                 sr = MakeSprite(Child(go.transform, "Visual", Vector2.zero).gameObject, data.BaseSprite, Color.white, 10);

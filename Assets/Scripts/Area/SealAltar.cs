@@ -79,6 +79,7 @@ namespace DrownedDream
         {
             if (IsActivated) return false;
             IsActivated = true;
+            GameEvents.RaiseAltarActivated();
             if (_light != null)
             {
                 _light.color = _activatedLightColor;

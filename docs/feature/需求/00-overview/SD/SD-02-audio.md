@@ -26,6 +26,12 @@
 | 封印完成 | 借用 Boss 咆哮（音高 0.7） | `GameEvents.BossSealed` |
 | 低語 | `SFX/sfx_whisper.wav`（Eerie,_echoing_whisp…） | `PlayerConfusion.WarningStarted`（精神錯亂預告） |
 | 驚嚇 | `SFX/sfx_jumpscare.wav`（jump scare.mp3） | `PlayerStatus.SanityStageChanged` 往更低分段時（幻覺出現） |
+| 主角受擊 | `SFX/sfx_player_hurt.wav`（主角被受擊.mp4，峰值拉到 -3 dB） | `PlayerStatus.Damaged`；冷卻 0.2 秒【2026-10-04】 |
+| 重生復活 | `SFX/sfx_respawn.wav`（重生復活音效.mp3，截 5 秒、尾端 1 秒淡出） | `GameEvents.PlayerRespawned`【2026-10-04】 |
+| 被怪物偵測到 | `SFX/sfx_detected.wav`（被怪物偵測到.mp4，峰值拉到 -3 dB） | `GameEvents.PlayerDetected`（`EnemyStatus` 未偵測 → 偵測）；冷卻 3 秒，多隻同時發現只響一次【2026-10-04】 |
+| 啟動封印祭壇（鎖鏈） | `SFX/sfx_seal_chain.wav`（封印－鏈子-音效.mp4，只取第一段 3.5 秒） | `GameEvents.AltarActivated`（`SealAltar.Activate`，每座祭壇都響）【2026-10-04】 |
+| Boss 追蹤彈 | `SFX/sfx_boss_homing.wav`（boss-追蹤子彈音效.mp3） | `GameEvents.BossHomingFired`（房內與全圖追蹤彈，每波一次）【2026-10-04】 |
+| Boss 落雷 | `SFX/sfx_boss_lightning.wav`（Boss落雷攻擊.mp3，截 4 秒） | `GameEvents.BossLightningStruck`（每道落雷預告結束、落下那一刻）；冷卻 0.15 秒【2026-10-04】 |
 
 ## 環境音疊層（循環）
 

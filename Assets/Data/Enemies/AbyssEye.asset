@@ -35,6 +35,9 @@ MonoBehaviour:
   _bubbleSpeed: 3
   _bubbleSize: 0.6
   _bubbleLifetime: 4
+  _bubbleFrames: []
+  _bubbleFrameDuration: 0.16
+  _bubbleArtScale: 1.6
   _spikeCooldown: 3
   _spikeWindup: 0.7
   _spikeActive: 0.3
@@ -68,6 +71,13 @@ MonoBehaviour:
   _baseSprite: {fileID: 21300000, guid: 739835bdffcfc4167bf8ce8c74853778, type: 3}
   _lookSprite: {fileID: 21300000, guid: 13da92e0c01104b1b8ce5aa64e06b669, type: 3}
   _lookRadius: 0.22
+  _lookFrames:
+  - {fileID: 21300000, guid: 2be24af1d44264dc0893fcbac2816684, type: 3}
+  - {fileID: 21300000, guid: 4ddab7416c3e141c083e9877c49cdf52, type: 3}
+  - {fileID: 21300000, guid: a96bf59950e424534aa9e62d1dbb1954, type: 3}
+  - {fileID: 21300000, guid: 9cfe945aad9684e1f9db16f333e2ea75, type: 3}
+  - {fileID: 21300000, guid: 3a491442c61644eb5887b86bb5b8fa00, type: 3}
+  _lookFramesHeight: 2.6
   _tendrilSprite: {fileID: 0}
   _color: {r: 0.95, g: 0.9, b: 0.4, a: 1}
   _size: {x: 1.2, y: 1.2}

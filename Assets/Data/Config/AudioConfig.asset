@@ -42,6 +42,18 @@ MonoBehaviour:
     _pitch: 1
     _pitchJitter: 0.05
     _cooldown: 0.05
+  _playerHurt:
+    _clip: {fileID: 8300000, guid: 3c763c018527e48028057c8320af7250, type: 3}
+    _volume: 0.9
+    _pitch: 1
+    _pitchJitter: 0.05
+    _cooldown: 0.2
+  _respawn:
+    _clip: {fileID: 8300000, guid: f5d10828071fa45168a59c1fe3c2b064, type: 3}
+    _volume: 0.7
+    _pitch: 1
+    _pitchJitter: 0
+    _cooldown: 1
   _harpoonHit:
     _clip: {fileID: 8300000, guid: 6b40c8ac126cd4d02b1dbe2d99d20138, type: 3}
     _volume: 0.9
@@ -66,6 +78,30 @@ MonoBehaviour:
     _pitch: 0.7
     _pitchJitter: 0
     _cooldown: 1
+  _detected:
+    _clip: {fileID: 8300000, guid: 01e1f6311ae1d44a2a9c6c058dda8ee4, type: 3}
+    _volume: 0.8
+    _pitch: 1
+    _pitchJitter: 0.05
+    _cooldown: 3
+  _sealChain:
+    _clip: {fileID: 8300000, guid: b8c2fa015ceb743d4b00ee06585cc859, type: 3}
+    _volume: 1
+    _pitch: 1
+    _pitchJitter: 0
+    _cooldown: 0.5
+  _bossHoming:
+    _clip: {fileID: 8300000, guid: d750a2b7c86074bf59e38bb1132a71c2, type: 3}
+    _volume: 0.7
+    _pitch: 1
+    _pitchJitter: 0.05
+    _cooldown: 0.5
+  _bossLightning:
+    _clip: {fileID: 8300000, guid: 5102a46483d694d0c90039a6bd46287f, type: 3}
+    _volume: 0.8
+    _pitch: 1
+    _pitchJitter: 0.05
+    _cooldown: 0.15
   _whisper:
     _clip: {fileID: 8300000, guid: f9d0dc57a99d5466090efb5b0ee5db3a, type: 3}
     _volume: 0.8

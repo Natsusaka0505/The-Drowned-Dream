@@ -65,6 +65,11 @@ namespace DrownedDream
             GameEvents.BossActivated += OnBossRoar;
             GameEvents.BossRoared += OnBossRoar;
             GameEvents.BossSealed += OnBossSealed;
+            GameEvents.PlayerRespawned += OnPlayerRespawned;
+            GameEvents.PlayerDetected += OnPlayerDetected;
+            GameEvents.AltarActivated += OnAltarActivated;
+            GameEvents.BossHomingFired += OnBossHoming;
+            GameEvents.BossLightningStruck += OnBossLightning;
         }
 
         /// <summary>取消訂閱全域事件。</summary>
@@ -76,6 +81,11 @@ namespace DrownedDream
             GameEvents.BossActivated -= OnBossRoar;
             GameEvents.BossRoared -= OnBossRoar;
             GameEvents.BossSealed -= OnBossSealed;
+            GameEvents.PlayerRespawned -= OnPlayerRespawned;
+            GameEvents.PlayerDetected -= OnPlayerDetected;
+            GameEvents.AltarActivated -= OnAltarActivated;
+            GameEvents.BossHomingFired -= OnBossHoming;
+            GameEvents.BossLightningStruck -= OnBossLightning;
         }
 
         /// <summary>找出玩家 / Boss 房 / BGM 並訂閱玩家元件事件（Player 在 Awake 註冊，因此放在 Start）。</summary>
@@ -92,6 +102,7 @@ namespace DrownedDream
             _player.Breath.StateChanged += OnBreathStateChanged;
             _player.Confusion.WarningStarted += OnConfusionWarning;
             _player.Status.SanityStageChanged += OnSanityStageChanged;
+            _player.Status.Damaged += OnPlayerDamaged;
         }
 
         /// <summary>取消訂閱玩家元件事件。</summary>
@@ -104,6 +115,7 @@ namespace DrownedDream
             _player.Breath.StateChanged -= OnBreathStateChanged;
             _player.Confusion.WarningStarted -= OnConfusionWarning;
             _player.Status.SanityStageChanged -= OnSanityStageChanged;
+            _player.Status.Damaged -= OnPlayerDamaged;
         }
 
         /// <summary>依目前狀態把各循環層淡到目標音量，憋氣時壓低 BGM。</summary>
@@ -200,6 +212,27 @@ namespace DrownedDream
 
         /// <summary>封印完成。</summary>
         private void OnBossSealed() => Play(_config.SealComplete);
+
+        /// <summary>主角受擊。</summary>
+        private void OnPlayerDamaged() => Play(_config.PlayerHurt);
+
+        /// <summary>重生復活。</summary>
+        private void OnPlayerRespawned() => Play(_config.Respawn);
+
+        /// <summary>被怪物發現（遊玩中才響，冷卻避免多隻連發）。</summary>
+        private void OnPlayerDetected()
+        {
+            if (GameFlow.IsPlaying) Play(_config.Detected);
+        }
+
+        /// <summary>啟動封印祭壇：鎖鏈。</summary>
+        private void OnAltarActivated() => Play(_config.SealChain);
+
+        /// <summary>Boss 放出追蹤彈。</summary>
+        private void OnBossHoming() => Play(_config.BossHoming);
+
+        /// <summary>Boss 落雷落下。</summary>
+        private void OnBossLightning() => Play(_config.BossLightning);
 
         /// <summary>精神錯亂預告：低語。</summary>
         private void OnConfusionWarning() => Play(_config.Whisper);

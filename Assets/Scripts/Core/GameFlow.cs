@@ -46,16 +46,15 @@ namespace DrownedDream
             "（A/D 移動　W 跳躍　Space 發射魚叉　Q 憋氣）",
         };
 
-        /// <summary>結局逐句文字。</summary>
-        [TextArea(2, 4)]
-        [SerializeField] private string[] _endingLines =
+        /// <summary>結局：每頁一張插圖 + 逐句文字（插圖依序為 Assets/Art/Ending/ending_0~4.png，由更新工具綁定；最後一頁黑底）。</summary>
+        [SerializeField] private StoryPage[] _endingPages =
         {
-            "封印完成的瞬間，海水灌入肺中——",
-            "……我猛然驚醒。",
-            "原來，全都是夢。",
-            "但那洞窟的位置，我記得一清二楚。",
-            "收拾行囊吧。該出發了。",
-            "The Drowned Dream\n\n— 感謝遊玩 —",
+            new StoryPage("封印完成的瞬間，海水灌進了我的肺——", "四周只剩下黑暗……和遠方某個呼喚我的聲音。"),
+            new StoryPage("冰冷的海水，慢慢變成了柔軟的枕頭。", "那個聲音還在耳邊，輕輕地……"),
+            new StoryPage("——！", "我猛然睜開了眼睛。"),
+            new StoryPage("熟悉的房間，熟悉的床。", "……原來，全都是夢。", "洞窟、邪神、那些雕像……大概只是太累了吧。"),
+            new StoryPage("直到我看見——床底下，有什麼正望著我。", "「謝謝你……帶我回家。」"),
+            new StoryPage("The Drowned Dream\n\n— 感謝遊玩 —"),
         };
 
         /// <summary>目前狀態。</summary>
@@ -131,7 +130,17 @@ namespace DrownedDream
                 Restart();
                 return;
             }
-            _storyPanel.Play(_endingLines, Restart);
+            _storyPanel.Play(_endingPages, Restart, true);
+        }
+
+        /// <summary>結束遊戲（Editor 中停止 Play）。封面與結局的 Quit 按鈕共用。</summary>
+        public static void QuitGame()
+        {
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#else
+            Application.Quit();
+#endif
         }
 
         /// <summary>重新載入目前場景（回到封面）。</summary>

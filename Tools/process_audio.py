@@ -1,7 +1,7 @@
 # 把 ArtSource/Audio 的原始音效處理成遊戲用 WAV（見 docs/feature/需求/00-overview/SD/SD-02-audio.md）
 # ・單次音效：去掉開頭空白、結尾補 10ms 淡出
 # ・循環音：切掉頭尾淡入 / 淡出 → 頭尾等功率交叉淡化成無縫循環
-# 用法：python3 Tools/process_audio.py（需要 numpy；解碼用 macOS afconvert，沒有時改用 ffmpeg）
+# 用法：python3 Tools/process_audio.py（需要 numpy；解碼用 macOS afconvert，沒有時改用 ffmpeg；MP4/AAC 也可）
 import os, shutil, subprocess, sys, tempfile, wave
 import numpy as np
 
@@ -10,7 +10,7 @@ SRC = os.path.join(ROOT, 'ArtSource', 'Audio')               # 原始檔資料�
 SFX = os.path.join(ROOT, 'Assets', 'Audio', 'SFX')           # 單次音效輸出
 AMB = os.path.join(ROOT, 'Assets', 'Audio', 'Ambience')      # 環境音輸出
 
-# 單次音效：(原始檔, 輸出檔)
+# 單次音效：(原始檔, 輸出檔[, 最長秒數(None = 不截), 峰值正規化 dBFS(None = 不調)])
 ONESHOTS = [
     ('raw_jump.mp3', 'sfx_jump.wav'),
     ('raw_land.mp3', 'sfx_land.wav'),
@@ -21,6 +21,13 @@ ONESHOTS = [
     ('raw_boss.mp3', 'sfx_boss_roar.wav'),
     ('raw_eerie_whisper.mp3', 'sfx_whisper.wav'),
     ('raw_jump_scare.mp3', 'sfx_jumpscare.wav'),
+    # 2026-10-04 音效交付
+    ('raw_player_hurt.mp4', 'sfx_player_hurt.wav', None, -3.0),
+    ('raw_seal_chain.mp4', 'sfx_seal_chain.wav', 3.5, None),
+    ('raw_respawn.mp3', 'sfx_respawn.wav', 5.0, None),
+    ('raw_detected.mp4', 'sfx_detected.wav', None, -3.0),
+    ('raw_boss_homing.mp3', 'sfx_boss_homing.wav', None, None),
+    ('raw_boss_lightning.mp3', 'sfx_boss_lightning.wav', 4.0, None),
 ]
 
 # 循環音：(原始檔, 輸出資料夾, 輸出檔, 取用起點秒, 最長秒數(None = 到結尾), 交叉淡化秒數)
@@ -84,6 +91,25 @@ def oneshot(data, sr):
     return out
 
 
+def limit_length(data, sr, max_seconds, fade=1.0):
+    # 超過 max_seconds 時截斷，最後 fade 秒淡出
+    n = int(max_seconds * sr)
+    if len(data) <= n:
+        return data
+    out = data[:n].copy()
+    f = min(n, int(fade * sr))
+    out[-f:] *= np.linspace(1.0, 0.0, f)[:, None]
+    return out
+
+
+def normalize_peak(data, peak_db):
+    # 把峰值拉到 peak_db dBFS（素材太小聲時用）
+    peak = np.abs(data).max()
+    if peak <= 0:
+        return data
+    return data * (10 ** (peak_db / 20) / peak)
+
+
 def trim_fades(data, sr):
     # 切掉頭尾比中段音量低 6 dB 以上的淡入 / 淡出
     db, n = level_db(data, sr)
@@ -107,9 +133,14 @@ def make_loop(data, sr, cross):
 
 def main():
     # 依清單處理全部音效
-    for src, dst in ONESHOTS:
+    for src, dst, *opt in ONESHOTS:
+        max_seconds, peak_db = (list(opt) + [None, None])[:2]
         data, sr = decode(os.path.join(SRC, src))
         out = oneshot(data, sr)
+        if max_seconds is not None:
+            out = limit_length(out, sr, max_seconds)
+        if peak_db is not None:
+            out = normalize_peak(out, peak_db)
         write(os.path.join(SFX, dst), out, sr)
         print(f'{dst:32s} {len(out) / sr:6.2f}s  {sr}Hz x{data.shape[1]}')
     for src, folder, dst, offset, length, cross in LOOPS:

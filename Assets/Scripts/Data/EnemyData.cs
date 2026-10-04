@@ -243,6 +243,14 @@ namespace DrownedDream
         [SerializeField] private float _lookRadius = 0.22f;
         /// <summary>追視圖最大偏移（唯讀）</summary>
         public float LookRadius => _lookRadius;
+        /// <summary>整張圖追視畫格（正視、右上、左上、左下、右下；有 5 格時優先使用，取代底層 + 瞳孔 + 眼皮）</summary>
+        [SerializeField] private Sprite[] _lookFrames;
+        /// <summary>整張圖追視畫格（唯讀）</summary>
+        public Sprite[] LookFrames => _lookFrames;
+        /// <summary>整張圖追視時的外觀高度（單位；圖含花瓣與葉子，比碰撞框大）</summary>
+        [SerializeField] private float _lookFramesHeight = 2.6f;
+        /// <summary>整張圖追視時的外觀高度（唯讀）</summary>
+        public float LookFramesHeight => _lookFramesHeight;
         /// <summary>攻擊用觸鬚圖（觸手橫戳時朝玩家伸出；空 = 拉長身體）</summary>
         [SerializeField] private Sprite _tendrilSprite;
         /// <summary>攻擊用觸鬚圖（唯讀）</summary>
