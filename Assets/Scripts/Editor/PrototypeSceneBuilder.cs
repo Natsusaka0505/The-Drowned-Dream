@@ -467,7 +467,7 @@ namespace DrownedDream.EditorTools
         {
             var globalLight = new GameObject("Global Light 2D").AddComponent<Light2D>();
             globalLight.lightType = Light2D.LightType.Global;
-            globalLight.intensity = 0.85f;
+            globalLight.intensity = 0.01f; // 2026-10-04：幾乎全暗，靠燈籠與場景光源照明
             globalLight.color = new Color(0.55f, 0.75f, 1f);
 
             var rooms = MapBuilder.Build(d.Map, s_groundLayer, s_square);
@@ -890,8 +890,8 @@ namespace DrownedDream.EditorTools
 
             var lantern = Child(go.transform, "Lantern", new Vector2(0f, 0.3f)).gameObject.AddComponent<Light2D>();
             lantern.lightType = Light2D.LightType.Point;
-            lantern.pointLightOuterRadius = 7f;
-            lantern.pointLightInnerRadius = 1f;
+            lantern.pointLightOuterRadius = 9f; // 2026-10-04 調整
+            lantern.pointLightInnerRadius = 3f;
             lantern.intensity = 0.9f;
             lantern.color = new Color(1f, 0.9f, 0.7f);
 
@@ -972,7 +972,7 @@ namespace DrownedDream.EditorTools
             col.size = new Vector2(1.2f, 1.6f);
             if (MakePropSprite(go.transform, CheckpointSpritePath, new Vector2(0f, -0.6f), 0f, 2.2f, Color.white, 3))
             {
-                var light = MakePointLight(go.transform, "TopLight", new Vector2(0f, 1.2f), new Color(1f, 0.15f, 0.12f), 1.6f, 0.15f, 1f);
+                var light = MakePointLight(go.transform, "TopLight", new Vector2(0f, 1.2f), new Color(1f, 0.15f, 0.12f), 15f, 0.4f, 1.18f); // 2026-10-04 調整
                 Wire(go.AddComponent<Checkpoint>(), ("_renderer", go.GetComponentInChildren<SpriteRenderer>()), ("_activeColor", Color.white), ("_light", light));
             }
             else
@@ -1373,9 +1373,9 @@ namespace DrownedDream.EditorTools
             var red = new Color(1f, 0.15f, 0.12f);
             var green = new Color(0.35f, 1f, 0.5f);
             // 內半徑小、強度高：中心亮、往外快速變暗，拉高明暗對比
-            MakePointLight(root, "RedMain", new Vector2(0f, 8f), red, 2.6f, 1f, 11f);
-            MakePointLight(root, "RedLeft", new Vector2(-7f, 6f), red, 2f, 0.5f, 6f);
-            MakePointLight(root, "RedRight", new Vector2(7f, 6f), red, 2f, 0.5f, 6f);
+            MakePointLight(root, "RedMain", new Vector2(0f, 8f), new Color(1f, 0.8352941f, 0.8352941f), 4f, 1f, 11f); // 2026-10-04：主光改淡粉 FFD5D5
+            MakePointLight(root, "RedLeft", new Vector2(-7f, 6f), red, 3f, 0.5f, 11f);
+            MakePointLight(root, "RedRight", new Vector2(7f, 6f), red, 3f, 0.5f, 11f);
             MakePointLight(root, "GreenLeft", new Vector2(-5f, -1.5f), green, 1.5f, 0.3f, 5f);
             MakePointLight(root, "GreenRight", new Vector2(5f, -1.5f), green, 1.5f, 0.3f, 5f);
         }
