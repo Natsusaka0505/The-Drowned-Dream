@@ -32,3 +32,14 @@ MonoBehaviour:
   _sideChance: 0.25
   _decorScale: 1.5
   _seed: 12345
+  _wallStonesH:
+  - {fileID: -6195925285471889682, guid: ae1194c2ed78ed745898e5fcfb7bdb2a, type: 3}
+  - {fileID: -6866451247273936217, guid: 330a6582b7079cf4b8f16df97c12cec5, type: 3}
+  _wallStonesV:
+  - {fileID: -57348318987593257, guid: d45ac018bb3dd4045afe96afae72cc62, type: 3}
+  - {fileID: 788180715343497964, guid: 8a8217e282004d747b3235a40d0b3462, type: 3}
+  _wallRocks:
+  - {fileID: -2182124076254010665, guid: b92df60e79b05a34e932f9275eb95678, type: 3}
+  - {fileID: 7331315201791160908, guid: d1c18360a55fb4042b4a9315b39c295a, type: 3}
+  _wallThickness: 1.15
+  _wallOverlap: 0.1

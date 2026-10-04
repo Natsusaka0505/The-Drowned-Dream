@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 
 namespace DrownedDream
 {
@@ -82,6 +83,85 @@ namespace DrownedDream
             }
         }
 
+        /// <summary>骨刺快取。</summary>
+        private static Sprite s_boneSpike;
+
+        /// <summary>
+        /// 骨刺：1×1 單位（128px、pivot 底部中央），由根部往尖端收窄並微微彎曲；
+        /// 根部暗紫黑 → 中段骨白 → 尖端亮白，左側受光、右側陰影，邊緣深色描邊與一道高光脊線。
+        /// </summary>
+        public static Sprite BoneSpike
+        {
+            get
+            {
+                if (s_boneSpike != null) return s_boneSpike;
+                const int size = 128;
+                var tex = new Texture2D(size, size) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+                var root = new Color(0.16f, 0.1f, 0.14f);
+                var bone = new Color(0.78f, 0.72f, 0.64f);
+                var tip = new Color(0.97f, 0.94f, 0.88f);
+                var outline = new Color(0.08f, 0.05f, 0.07f);
+                for (int y = 0; y < size; y++)
+                {
+                    float v = (y + 0.5f) / size;                       // 0 根部 → 1 尖端
+                    float hw = 0.48f * Mathf.Pow(1f - v, 0.85f);        // 半寬
+                    float cx = 0.5f + 0.07f * v * v;                    // 尖端微微往右彎
+                    var body = v < 0.45f ? Color.Lerp(root, bone, v / 0.45f) : Color.Lerp(bone, tip, (v - 0.45f) / 0.55f);
+                    for (int x = 0; x < size; x++)
+                    {
+                        float px = (x + 0.5f) / size;
+                        if (hw <= 0.001f)
+                        {
+                            tex.SetPixel(x, y, Color.clear);
+                            continue;
+                        }
+                        float u = (px - cx) / hw;                       // -1 左緣 ~ 1 右緣
+                        float edge = (1f - Mathf.Abs(u)) * hw * size;   // 到邊緣的像素距離
+                        if (edge <= 0f)
+                        {
+                            tex.SetPixel(x, y, Color.clear);
+                            continue;
+                        }
+                        float light = u < 0f ? 1f + 0.18f * -u : 1f - 0.4f * u; // 左亮右暗
+                        var c = body * light;
+                        if (Mathf.Abs(u + 0.35f) < 0.08f && v > 0.2f) c = Color.Lerp(c, tip, 0.6f); // 高光脊線
+                        if (edge < 2.2f) c = Color.Lerp(outline, c, edge / 2.2f);                    // 描邊
+                        c.a = Mathf.Clamp01(edge);                                                   // 邊緣抗鋸齒
+                        tex.SetPixel(x, y, c);
+                    }
+                }
+                tex.Apply();
+                s_boneSpike = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0f), size);
+                return s_boneSpike;
+            }
+        }
+
+        /// <summary>柔光圓快取。</summary>
+        private static Sprite s_glow;
+
+        /// <summary>1 單位直徑的柔光圓：中心不透明、往外平滑淡出（彈幕閃光用）。</summary>
+        public static Sprite Glow
+        {
+            get
+            {
+                if (s_glow != null) return s_glow;
+                const int size = 64;
+                var tex = new Texture2D(size, size) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+                float r = size / 2f;
+                for (int y = 0; y < size; y++)
+                {
+                    for (int x = 0; x < size; x++)
+                    {
+                        float d = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), new Vector2(r, r)) / r;
+                        tex.SetPixel(x, y, new Color(1f, 1f, 1f, Mathf.Pow(Mathf.Clamp01(1f - d), 2f)));
+                    }
+                }
+                tex.Apply();
+                s_glow = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), size);
+                return s_glow;
+            }
+        }
+
         /// <summary>產生 32×32 白色方塊 / 圓形（32px = 1 單位）。</summary>
         private static Sprite Make(bool circle)
         {
@@ -149,17 +229,51 @@ namespace DrownedDream
         private LayerMask _blockMask;
         /// <summary>是否已被打破 / 命中。</summary>
         private bool _dead;
+        /// <summary>動畫畫格（null = 用單色圓形）。</summary>
+        private Sprite[] _frames;
+        /// <summary>每格秒數。</summary>
+        private float _frameDuration;
+        /// <summary>動畫已播放秒數。</summary>
+        private float _animTime;
+        /// <summary>外觀 Renderer。</summary>
+        private SpriteRenderer _renderer;
+        /// <summary>判定直徑（外觀放大時判定不變）。</summary>
+        private float _hitSize;
+        /// <summary>閃光柔光（有動畫圖時才有）。</summary>
+        private SpriteRenderer _glow;
+        /// <summary>閃光光源（有動畫圖時才有）。</summary>
+        private Light2D _light;
+
+        /// <summary>閃光顏色。</summary>
+        private static readonly Color FlashColor = new Color(1f, 0.3f, 0.25f);
+        /// <summary>閃光頻率（弧度 / 秒）。</summary>
+        private const float FlashSpeed = 8f; // 2026-10-04 放慢為一半
 
         /// <summary>是否還存在（魚叉判定用）。</summary>
         public bool IsAlive => !_dead;
 
-        /// <summary>執行期產生一顆彈幕（breakable = 可被魚叉打破，會放在 Enemy Layer 並加觸發碰撞）。</summary>
+        /// <summary>
+        /// 執行期產生一顆彈幕（breakable = 可被魚叉打破，會放在 Enemy Layer 並加觸發碰撞）。
+        /// frames 有圖時依序循環播放（每格 frameDuration 秒，不套 color 色調），外觀放大 artScale 倍（判定仍為 size）並加閃光；
+        /// 沒有圖時用 color 單色圓形。
+        /// </summary>
         public static EnemyProjectile Spawn(Vector2 position, Vector2 velocity, float size, Color color, float damage, float sanityDamage,
-            float lifetime, LayerMask blockMask, float turnRate = 0f, bool breakable = false)
+            float lifetime, LayerMask blockMask, float turnRate = 0f, bool breakable = false, Sprite[] frames = null, float frameDuration = 0.16f,
+            float artScale = 1f)
         {
-            var sr = HazardSprites.Spawn("EnemyProjectile", HazardSprites.Circle, position, color, 20);
-            sr.transform.localScale = Vector3.one * size;
+            bool animated = frames != null && frames.Length > 0 && frames[0] != null;
+            float visual = animated ? Mathf.Max(0.1f, artScale) : 1f;
+            var sr = HazardSprites.Spawn("EnemyProjectile", animated ? frames[0] : HazardSprites.Circle, position, animated ? Color.white : color, 20);
+            sr.transform.localScale = Vector3.one * size * visual;
             var p = sr.gameObject.AddComponent<EnemyProjectile>();
+            p._renderer = sr;
+            p._hitSize = size;
+            if (animated)
+            {
+                p._frames = frames;
+                p._frameDuration = Mathf.Max(0.01f, frameDuration);
+                p.AddFlash();
+            }
             p._velocity = velocity;
             p._damage = damage;
             p._sanityDamage = sanityDamage;
@@ -172,10 +286,47 @@ namespace DrownedDream
                 if (enemyLayer >= 0) sr.gameObject.layer = enemyLayer;
                 var col = sr.gameObject.AddComponent<CircleCollider2D>();
                 col.isTrigger = true;
-                col.radius = 0.5f;
+                col.radius = 0.5f / visual; // 世界半徑維持 size / 2
             }
             return p;
         }
+
+        /// <summary>閃光：後方一層紅色柔光 + 小範圍點光源，兩者隨時間閃爍。</summary>
+        private void AddFlash()
+        {
+            _flashPhase = Random.value * 10f;
+            var glowGo = new GameObject("Glow");
+            glowGo.transform.SetParent(transform, false);
+            glowGo.transform.localScale = Vector3.one * 1.6f;
+            _glow = glowGo.AddComponent<SpriteRenderer>();
+            _glow.sprite = HazardSprites.Glow;
+            _glow.color = FlashColor;
+            _glow.sortingOrder = _renderer.sortingOrder - 1;
+
+            _light = gameObject.AddComponent<Light2D>();
+            _light.lightType = Light2D.LightType.Point;
+            _light.color = FlashColor;
+            _light.pointLightInnerRadius = 0.1f;
+            _light.pointLightOuterRadius = 1.8f;
+            UpdateFlash();
+        }
+
+        /// <summary>依時間更新閃光強度（尖峰型閃爍，每顆起始相位隨機）。</summary>
+        private void UpdateFlash()
+        {
+            if (_glow == null) return;
+            float flash = Mathf.Pow(0.5f + 0.5f * Mathf.Sin((_animTime + _flashPhase) * FlashSpeed), 3f);
+            var c = FlashColor;
+            c.a = 0.15f + 0.7f * flash;
+            _glow.color = c;
+            // 子彈本體也跟著閃：不透明度 0.35 ~ 1（加強透明感）
+            _renderer.color = new Color(1f, 1f, 1f, 0.35f + 0.65f * flash);
+            _glow.transform.localScale = Vector3.one * (1.4f + 0.5f * flash);
+            if (_light != null) _light.intensity = 0.5f + 1.5f * flash;
+        }
+
+        /// <summary>閃光起始相位（讓同一波子彈不同步閃）。</summary>
+        private float _flashPhase;
 
         /// <summary>追蹤轉向、移動、檢查撞牆與命中玩家。</summary>
         private void Update()
@@ -184,6 +335,14 @@ namespace DrownedDream
             float dt = Time.deltaTime;
             _lifetime -= dt;
             var player = Player.Instance;
+
+            if (_frames != null)
+            {
+                _animTime += dt;
+                var frame = _frames[(int)(_animTime / _frameDuration) % _frames.Length];
+                if (frame != null) _renderer.sprite = frame;
+                UpdateFlash();
+            }
 
             if (_turnRate > 0f && HazardSprites.CanHit(player))
             {
@@ -195,7 +354,7 @@ namespace DrownedDream
 
             Vector2 pos = transform.position;
             Vector2 step = _velocity * dt;
-            if (_lifetime <= 0f || Physics2D.Raycast(pos, step.normalized, step.magnitude, _blockMask).collider != null)
+            if (_lifetime <= 0f || HitsWall(pos, step))
             {
                 Destroy(gameObject);
                 return;
@@ -203,11 +362,18 @@ namespace DrownedDream
             transform.position = pos + step;
 
             if (HazardSprites.CanHit(player) &&
-                Vector2.Distance(player.transform.position, transform.position) <= PlayerHitRadius + transform.localScale.x * 0.5f &&
+                Vector2.Distance(player.transform.position, transform.position) <= PlayerHitRadius + _hitSize * 0.5f &&
                 HazardSprites.HitPlayer(player, _damage, _sanityDamage))
             {
                 Destroy(gameObject);
             }
+        }
+
+        /// <summary>這一步是否撞牆（單向平台不擋彈幕，例如 Boss 浮岩、浮台）。</summary>
+        private bool HitsWall(Vector2 pos, Vector2 step)
+        {
+            var hit = Physics2D.Raycast(pos, step.normalized, step.magnitude, _blockMask);
+            return hit.collider != null && !hit.collider.usedByEffector;
         }
 
         /// <summary>被魚叉命中：彈幕破掉。</summary>

@@ -42,6 +42,28 @@ namespace DrownedDream
         /// <summary>裝飾亂數種子（唯讀）</summary>
         public int Seed => _seed;
 
+        [Header("牆面石塊（newWall 美術，沿牆自動鋪設）")]
+        /// <summary>水平牆（地板 / 天花板）用的橫向石條</summary>
+        [SerializeField] private Sprite[] _wallStonesH;
+        /// <summary>水平牆用的橫向石條（唯讀）</summary>
+        public Sprite[] WallStonesH => _wallStonesH;
+        /// <summary>垂直牆用的直向石柱</summary>
+        [SerializeField] private Sprite[] _wallStonesV;
+        /// <summary>垂直牆用的直向石柱（唯讀）</summary>
+        public Sprite[] WallStonesV => _wallStonesV;
+        /// <summary>貼地方塊等短而厚的凸塊用的大石塊</summary>
+        [SerializeField] private Sprite[] _wallRocks;
+        /// <summary>凸塊用的大石塊（唯讀）</summary>
+        public Sprite[] WallRocks => _wallRocks;
+        /// <summary>石條 / 石柱的厚度（單位；牆厚 1，略大一點蓋住接縫）</summary>
+        [SerializeField] private float _wallThickness = 1.15f;
+        /// <summary>石條 / 石柱的厚度（唯讀）</summary>
+        public float WallThickness => _wallThickness;
+        /// <summary>相鄰石塊重疊比例（0 = 剛好相接）</summary>
+        [Range(0f, 0.5f)] [SerializeField] private float _wallOverlap = 0.1f;
+        /// <summary>相鄰石塊重疊比例（唯讀）</summary>
+        public float WallOverlap => _wallOverlap;
+
         /// <summary>取得指定列 / 欄的地形圖塊（0~2）。</summary>
         public Sprite GetTerrain(int row, int col) => _terrain != null && _terrain.Length == 9 ? _terrain[row * 3 + col] : null;
     }

@@ -220,7 +220,8 @@ namespace DrownedDream
             _bubbleTimer = Data.BubbleInterval;
             Vector2 dir = ((Vector2)player.transform.position - _body.position).normalized;
             EnemyProjectile.Spawn(_body.position + dir * 0.6f, dir * Data.BubbleSpeed, Data.BubbleSize, new Color(0.7f, 0.95f, 1f, 0.85f),
-                Data.AttackDamage, 0f, Data.BubbleLifetime, _groundMask, breakable: true);
+                Data.AttackDamage, 0f, Data.BubbleLifetime, _groundMask, breakable: true,
+                frames: Data.BubbleFrames, frameDuration: Data.BubbleFrameDuration, artScale: Data.BubbleArtScale);
         }
 
         /// <summary>觸手：玩家在偵測範圍內、橫戳範圍外時，定時在玩家腳下預告後冒出地刺。</summary>

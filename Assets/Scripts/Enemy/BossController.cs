@@ -53,6 +53,12 @@ namespace DrownedDream
         [SerializeField] private float _volleySpeed = 5f;
         /// <summary>彈幕存活秒數。</summary>
         [SerializeField] private float _projectileLifetime = 6f;
+        /// <summary>彈幕 / 追蹤彈動畫畫格（依序循環；空著用單色圓形）。</summary>
+        [SerializeField] private Sprite[] _projectileFrames;
+        /// <summary>彈幕動畫每格秒數。</summary>
+        [SerializeField] private float _projectileFrameDuration = 0.16f;
+        /// <summary>彈幕動畫外觀放大倍率（判定大小不變）。</summary>
+        [SerializeField] private float _projectileArtScale = 1.6f;
 
         [Header("咆哮")]
         /// <summary>咆哮前蓄力秒數（Boss 閃爍）。</summary>
@@ -104,6 +110,34 @@ namespace DrownedDream
         /// <summary>落雷特效存在秒數。</summary>
         [SerializeField] private float _lightningFxTime = 0.5f;
 
+        [Header("浮岩地刺（玩家站上 Boss 下方浮岩時）")]
+        /// <summary>浮岩站立面中央（世界座標，由建場景工具設定）。</summary>
+        [SerializeField] private Vector2 _rockTop;
+        /// <summary>浮岩站立面半寬（0 = 沒有浮岩，不使用地刺）。</summary>
+        [SerializeField] private float _rockHalfWidth;
+        /// <summary>站上浮岩後每隔幾秒冒一次地刺（強化時同樣縮短）。</summary>
+        [SerializeField] private float _rockSpikeInterval = 2.2f;
+        /// <summary>剛站上浮岩到第一次地刺的秒數。</summary>
+        [SerializeField] private float _rockSpikeFirstDelay = 0.6f;
+        /// <summary>每組地刺範圍寬度。</summary>
+        [SerializeField] private float _rockSpikeWidth = 3f;
+        /// <summary>骨刺最高高度。</summary>
+        [SerializeField] private float _rockSpikeHeight = 1.9f;
+        /// <summary>地刺預告秒數。</summary>
+        [SerializeField] private float _rockSpikeWarn = 0.8f;
+        /// <summary>地刺判定秒數。</summary>
+        [SerializeField] private float _rockSpikeActive = 0.45f;
+        /// <summary>地刺裂縫 / 閃光顏色。</summary>
+        [SerializeField] private Color _rockSpikeColor = new Color(1f, 0.25f, 0.15f);
+
+        [Header("集齊封印道具後強化")]
+        /// <summary>玩家集齊封印道具後，攻擊間隔（房內與全圖）乘上此倍率。</summary>
+        [SerializeField] private float _empoweredIntervalMultiplier = 0.5f;
+        /// <summary>玩家集齊封印道具後，彈幕 / 追蹤彈 / 落雷（房內與全圖）各多幾發。</summary>
+        [SerializeField] private int _empoweredExtraCount = 1;
+        /// <summary>強化時顯示的提示。</summary>
+        [SerializeField] private string _empoweredMessage = "邪神察覺到雕像的力量……攻擊變得更加猛烈！";
+
         [Header("全圖攻擊（玩家離開 Boss 房後）")]
         /// <summary>全圖攻擊間隔秒數（0 = 關閉）。</summary>
         [SerializeField] private float _globalInterval = 5f;
@@ -121,6 +155,8 @@ namespace DrownedDream
         [SerializeField] private bool _canBeDamaged;
         /// <summary>被攻擊幾次死亡（可受傷時才有意義）。</summary>
         [SerializeField] private int _maxHits = 30;
+        /// <summary>第一次進房的變身演出前是否隱藏外觀（由 BossArea 呼叫 Reveal 現身）。</summary>
+        [SerializeField] private bool _hiddenUntilRevealed = true;
         /// <summary>Boss 腳底離房間地面的高度（站在浮岩上時 &gt; 0；掃地 / 落雷仍以房間地面為準）。</summary>
         [SerializeField] private float _hoverHeight;
 
@@ -146,6 +182,17 @@ namespace DrownedDream
         private int _hitCount;
         /// <summary>原始顏色。</summary>
         private Color _baseColor;
+        /// <summary>距離下一次浮岩地刺的秒數。</summary>
+        private float _rockSpikeTimer;
+        /// <summary>是否已顯示過強化提示。</summary>
+        private bool _empoweredAnnounced;
+
+        /// <summary>玩家是否已集齊封印道具（Boss 進入強化狀態）。</summary>
+        private static bool Empowered => Player.Instance != null && Player.Instance.Status.HasAllSeals;
+        /// <summary>目前攻擊間隔倍率（強化時縮短）。</summary>
+        private float IntervalScale => Empowered ? _empoweredIntervalMultiplier : 1f;
+        /// <summary>目前每招額外發數（強化時增加）。</summary>
+        private int ExtraCount => Empowered ? _empoweredExtraCount : 0;
 
         /// <summary>場上的 Boss（小地圖標示用）。</summary>
         public static BossController Instance { get; private set; }
@@ -164,6 +211,13 @@ namespace DrownedDream
             if (_renderer != null) _baseColor = _renderer.color;
             _collider = GetComponent<Collider2D>();
             Instance = this;
+            if (_hiddenUntilRevealed && _renderer != null) _renderer.enabled = false;
+        }
+
+        /// <summary>現身（精靈變身演出的最後一刻）。</summary>
+        public void Reveal()
+        {
+            if (_renderer != null) _renderer.enabled = true;
         }
 
         /// <summary>清除場上 Boss 參照。</summary>
@@ -180,8 +234,9 @@ namespace DrownedDream
         {
             if (IsSealed || IsActive) return;
             IsActive = true;
-            _attackTimer = _attackInterval;
-            if (!_awakened) _globalTimer = _globalInterval;
+            _attackTimer = _attackInterval * IntervalScale;
+            if (!_awakened) _globalTimer = _globalInterval * IntervalScale;
+            if (Empowered) _empoweredAnnounced = true; // 進房時已集齊：強化提示併在 BossArea 的進房提示裡
             _awakened = true;
             Debug.Log("[Boss] 啟動，開始攻擊");
             GameEvents.RaiseBossActivated();
@@ -218,6 +273,11 @@ namespace DrownedDream
             if (IsSealed || !GameFlow.IsPlaying) return;
             var player = Player.Instance;
             if (player == null || !player.Status.IsAlive) return;
+            if (_awakened && !IsSealed && !_empoweredAnnounced && Empowered)
+            {
+                _empoweredAnnounced = true; // 已喚醒後才提示（還沒見過 Boss 時不劇透）
+                GameEvents.ShowMessage(_empoweredMessage, 3f);
+            }
             if (_respectStealth && !player.IsVisibleToEnemies) return;
 
             if (!IsActive)
@@ -225,6 +285,7 @@ namespace DrownedDream
                 UpdateGlobalAttack(player);
                 return;
             }
+            UpdateRockSpikes(player);
             if (_attacking) return;
 
             _attackTimer -= Time.deltaTime;
@@ -235,13 +296,48 @@ namespace DrownedDream
             StartCoroutine(AttackRoutine(attack, player));
         }
 
+        /// <summary>玩家是否站在浮岩上（站立面範圍內、離頂面不遠）。</summary>
+        private bool IsOnRock(Player player)
+        {
+            if (_rockHalfWidth <= 0f) return false;
+            Vector2 p = player.transform.position;
+            return Mathf.Abs(p.x - _rockTop.x) <= _rockHalfWidth && p.y >= _rockTop.y - 0.2f && p.y <= _rockTop.y + 2.5f;
+        }
+
+        /// <summary>
+        /// 浮岩地刺：玩家站在浮岩上時定時在腳下冒地刺（與一般出招輪替各自獨立）；
+        /// 強化時間隔縮短，並在浮岩上另一個隨機位置多冒一組。
+        /// </summary>
+        private void UpdateRockSpikes(Player player)
+        {
+            if (!IsOnRock(player))
+            {
+                _rockSpikeTimer = _rockSpikeFirstDelay; // 剛站上去給一點反應時間
+                return;
+            }
+            _rockSpikeTimer -= Time.deltaTime;
+            if (_rockSpikeTimer > 0f) return;
+            _rockSpikeTimer = _rockSpikeInterval * IntervalScale;
+
+            float half = Mathf.Max(0f, _rockHalfWidth - _rockSpikeWidth / 2f);
+            float x = Mathf.Clamp(player.transform.position.x, _rockTop.x - half, _rockTop.x + half);
+            SpawnRockSpike(x);
+            for (int i = 0; i < ExtraCount; i++) SpawnRockSpike(_rockTop.x + Random.Range(-half, half));
+        }
+
+        /// <summary>在浮岩頂面 x 位置冒一組地刺。</summary>
+        private void SpawnRockSpike(float x)
+        {
+            SpikeEruption.Spawn(new Vector2(x, _rockTop.y), _rockSpikeWidth, _rockSpikeHeight, _rockSpikeWarn, _rockSpikeActive, _damage, _rockSpikeColor);
+        }
+
         /// <summary>全圖攻擊：喚醒後玩家不在 Boss 房時，定時在玩家附近交替落雷 / 追蹤彈（只扣 HP）。</summary>
         private void UpdateGlobalAttack(Player player)
         {
             if (!_awakened || _globalInterval <= 0f) return;
             _globalTimer -= Time.deltaTime;
             if (_globalTimer > 0f) return;
-            _globalTimer = _globalInterval;
+            _globalTimer = _globalInterval * IntervalScale;
 
             if (_globalUseLightning) StartCoroutine(GlobalLightning(player));
             else GlobalHoming(player);
@@ -256,7 +352,7 @@ namespace DrownedDream
             Debug.Log("[Boss] 全圖攻擊：落雷");
             var b = room.Bounds;
             float baseX = player.transform.position.x;
-            int count = Mathf.Max(1, _globalLightningCount);
+            int count = Mathf.Max(1, _globalLightningCount + ExtraCount);
             for (int i = 0; i < count; i++)
             {
                 int step = (i + 1) / 2 * (i % 2 == 1 ? 1 : -1);
@@ -271,7 +367,7 @@ namespace DrownedDream
         private void GlobalHoming(Player player)
         {
             Debug.Log("[Boss] 全圖攻擊：追蹤彈");
-            SpawnOffscreenHoming(player.transform.position, _globalHomingCount);
+            SpawnOffscreenHoming(player.transform.position, _globalHomingCount + ExtraCount);
         }
 
         /// <summary>中斷出招並重置狀態。</summary>
@@ -296,7 +392,7 @@ namespace DrownedDream
                 case BossAttack.Roar: yield return Roar(player); break;
             }
             _attacking = false;
-            _attackTimer = _attackInterval;
+            _attackTimer = _attackInterval * IntervalScale;
         }
 
         /// <summary>朝目標發射一波扇形彈幕。</summary>
@@ -304,12 +400,13 @@ namespace DrownedDream
         {
             Vector2 origin = transform.position;
             Vector2 baseDir = (target - origin).normalized;
-            int count = Mathf.Max(1, _volleyCount);
+            int count = Mathf.Max(1, _volleyCount + ExtraCount);
             for (int i = 0; i < count; i++)
             {
                 float t = count == 1 ? 0f : (i / (float)(count - 1) - 0.5f);
                 var dir = (Vector2)(Quaternion.Euler(0f, 0f, t * _volleySpread) * baseDir);
-                EnemyProjectile.Spawn(origin, dir * _volleySpeed, 0.5f, new Color(0.8f, 0.2f, 1f), _damage, 0f, _projectileLifetime, _projectileBlockMask);
+                EnemyProjectile.Spawn(origin, dir * _volleySpeed, 0.5f, new Color(0.8f, 0.2f, 1f), _damage, 0f, _projectileLifetime, _projectileBlockMask,
+                    frames: _projectileFrames, frameDuration: _projectileFrameDuration, artScale: _projectileArtScale);
             }
         }
 
@@ -317,7 +414,7 @@ namespace DrownedDream
         private void FireHoming()
         {
             var player = Player.Instance;
-            if (player != null) SpawnOffscreenHoming(player.transform.position, _homingCount);
+            if (player != null) SpawnOffscreenHoming(player.transform.position, _homingCount + ExtraCount);
         }
 
         /// <summary>在畫面外（以玩家為中心的左上 ~ 右上扇形方向，剛好出畫面邊緣）放出追蹤彈，初速朝向玩家。</summary>
@@ -330,7 +427,8 @@ namespace DrownedDream
                 var dir = new Vector2(side, 0.8f).normalized;
                 Vector2 pos = OffscreenPoint(target, dir);
                 EnemyProjectile.Spawn(pos, (target - pos).normalized * _homingSpeed, 0.7f, new Color(0.3f, 1f, 0.6f), _damage, 0f,
-                    _homingLifetime, 0, _homingTurnRate);
+                    _homingLifetime, 0, _homingTurnRate, frames: _projectileFrames, frameDuration: _projectileFrameDuration,
+                    artScale: _projectileArtScale);
             }
         }
 
@@ -368,7 +466,7 @@ namespace DrownedDream
             float floorY = FloorY;
             float height = b.max.y - floorY;
             float baseX = player.transform.position.x;
-            int count = Mathf.Max(1, _lightningCount);
+            int count = Mathf.Max(1, _lightningCount + ExtraCount);
             for (int i = 0; i < count; i++)
             {
                 // 0, +1, -1, +2, -2 … 由中間往兩側

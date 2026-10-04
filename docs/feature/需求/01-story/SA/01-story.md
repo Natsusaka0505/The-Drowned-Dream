@@ -18,6 +18,7 @@
 - F-STORY-05：進 Boss 房前，**所有提示文字由精靈說**：左下角精靈頭像（美術 `elf.png`，輕輕上下飄）+ 對話框。
 - F-STORY-06：開寶箱取得道具時，精靈依內容物（繃帶 / 藥丸 / 雕像）**隨機說一句符合情境的台詞**，並附上取得的道具名；台詞在 `TreasureChest` 的 `_hpLines / _sanityLines / _sealLines` 可改。
 - F-STORY-07：精靈也出現在背包畫面（左下，打開背包時隨機一句）。
+- F-STORY-10：**劇情反轉**（2026-10-04）：一路給提示的精靈其實就是邪神。第一次進 Boss 房時精靈變身成 Boss（演出見 [07-boss-seal F-BOSS-23](../../07-boss-seal/SA/07-boss-seal.md)）；之後背包左下改為邪神頭像 + 嘲諷台詞（`InventoryPanel._bossLines` 可改）。
 - F-STORY-09：精靈對話框與畫面下方提示文字為**半透明**（預設不透明度 0.6，`HUD._elfAlpha / _messageAlpha` 可調）。【2026-10-04】
 - F-STORY-08：第一次進 Boss 房（鏡頭特寫）後精靈退場，之後的提示改為畫面下方的一般文字。
 

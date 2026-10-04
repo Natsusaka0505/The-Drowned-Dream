@@ -39,6 +39,10 @@ namespace DrownedDream
         [SerializeField] private Color _bossColor = new Color(0.9f, 0.12f, 0.12f, 1f);
         /// <summary>已封印的 Boss。</summary>
         [SerializeField] private Color _sealedBossColor = new Color(0.45f, 0.45f, 0.5f, 1f);
+        /// <summary>小地圖 Boss 動畫畫格（boss.gif 拆出的 boss_00~32；空著時畫色塊）。</summary>
+        [SerializeField] private Sprite[] _bossMapFrames;
+        /// <summary>小地圖 Boss 動畫每格秒數（照 boss.gif 原本時間）。</summary>
+        [SerializeField] private float[] _bossMapDurations;
 
         [Header("精靈台詞（打開背包時隨機一句）")]
         /// <summary>一般台詞。</summary>
@@ -49,6 +53,18 @@ namespace DrownedDream
             "雕像要集滿才能封印那傢伙，加油！",
             "在這裡休息一下也沒關係，時間是停住的。",
         };
+        [Header("精靈曝光為邪神後（第一次進 Boss 房）")]
+        /// <summary>邪神頭像（取代精靈）。</summary>
+        [SerializeField] private Sprite _bossSprite;
+        /// <summary>邪神的嘲諷台詞（打開背包時隨機一句）。</summary>
+        [SerializeField] private string[] _bossLines =
+        {
+            "還在翻背包？你逃不掉的。",
+            "雕像都在你身上……真是辛苦你了。",
+            "這片深海，就是你的墓。",
+            "一路上的提示，全都是為了今天。",
+        };
+
         /// <summary>最後的封印道具出現後的台詞。</summary>
         [SerializeField] private string _finalSealLine = "最後一尊雕像在地圖上閃爍的地方！快去拿！";
 
@@ -65,6 +81,16 @@ namespace DrownedDream
         private RectTransform _mapContent;
         /// <summary>精靈台詞。</summary>
         private Text _elfText;
+        /// <summary>精靈頭像（曝光後換成邪神）。</summary>
+        private Image _elfImage;
+        /// <summary>精靈是否已曝光為邪神。</summary>
+        private bool _elfRevealed;
+        /// <summary>小地圖上的 Boss 動畫圖（沒畫出時為 null）。</summary>
+        private Image _bossMapImage;
+        /// <summary>小地圖 Boss 動畫目前畫格。</summary>
+        private int _bossMapFrame;
+        /// <summary>小地圖 Boss 動畫目前畫格已顯示秒數。</summary>
+        private float _bossMapTimer;
         /// <summary>最後封印道具標記（閃爍）。</summary>
         private readonly List<Image> _blinkMarkers = new List<Image>();
         /// <summary>玩家快取。</summary>
@@ -95,7 +121,7 @@ namespace DrownedDream
         {
             var list = UIFactory.Rect("Items", bg, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(-430f, 110f), new Vector2(640f, 680f));
             _harpoonText = ItemRow(list, 0f, _harpoonIcon, "［武器］魚叉", "撿回插在牆上的魚叉可補充。");
-            _sealText = ItemRow(list, -170f, _sealIcon, "［關鍵］邪神雕像", "集齊即可在祭壇封印邪神。");
+            _sealText = ItemRow(list, -170f, _sealIcon, "［關鍵］邪神雕像", "集齊後啟動邪神兩側的兩座祭壇即可封印。");
 
             var legendTitle = UIFactory.Rect("LegendTitle", list, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -350f), new Vector2(600f, 36f));
             UIFactory.Text(legendTitle, "小地圖：未開啟的寶箱", 24, TextAnchor.MiddleLeft, new Color(0.8f, 0.85f, 0.9f));
@@ -166,6 +192,7 @@ namespace DrownedDream
             img.sprite = _elfSprite;
             img.preserveAspect = true;
             img.enabled = _elfSprite != null;
+            _elfImage = img;
             var textRt = UIFactory.Rect("Line", root, Vector2.zero, Vector2.zero, Vector2.zero, new Vector2(165f, 40f), new Vector2(720f, 70f));
             _elfText = UIFactory.Text(textRt, "", 24, TextAnchor.MiddleLeft, new Color(0.92f, 0.97f, 1f));
         }
@@ -176,6 +203,22 @@ namespace DrownedDream
             _player = Player.Instance;
         }
 
+        /// <summary>訂閱 Boss 現身（精靈曝光）。</summary>
+        private void OnEnable() => GameEvents.BossRevealed += OnBossRevealed;
+
+        /// <summary>取消訂閱。</summary>
+        private void OnDisable() => GameEvents.BossRevealed -= OnBossRevealed;
+
+        /// <summary>精靈曝光為邪神：之後背包左下改顯示邪神頭像與嘲諷台詞。</summary>
+        private void OnBossRevealed()
+        {
+            _elfRevealed = true;
+            if (_elfImage == null) return;
+            _elfImage.sprite = _bossSprite;
+            _elfImage.enabled = _bossSprite != null;
+            _elfImage.color = new Color(1f, 0.75f, 0.75f);
+        }
+
         /// <summary>背包鍵切換開關並暫停遊戲；開啟中讓最後封印道具標記閃爍。</summary>
         private void Update()
         {
@@ -183,6 +226,7 @@ namespace DrownedDream
             {
                 float a = 0.45f + 0.55f * Mathf.Abs(Mathf.Sin(Time.unscaledTime * 4f));
                 foreach (var m in _blinkMarkers) if (m != null) m.color = new Color(_finalSealColor.r, _finalSealColor.g, _finalSealColor.b, a);
+                TickBossMap(Time.unscaledDeltaTime); // 背包開啟時遊戲暫停，用不受 timeScale 影響的時間
             }
 
             if (_player == null || !_player.Input.InventoryPressed) return;
@@ -203,6 +247,12 @@ namespace DrownedDream
             _sealText.text = $"［關鍵］邪神雕像　{s.SealCount} / {s.RequiredSeals}";
             RebuildMap();
 
+            if (_elfRevealed)
+            {
+                _elfText.text = _bossLines != null && _bossLines.Length > 0 ? _bossLines[Random.Range(0, _bossLines.Length)] : "";
+                _elfText.color = new Color(1f, 0.55f, 0.55f);
+                return;
+            }
             var final = FindFinalSeal();
             _elfText.text = final != null ? _finalSealLine
                 : _elfLines != null && _elfLines.Length > 0 ? _elfLines[Random.Range(0, _elfLines.Length)] : "";
@@ -213,6 +263,7 @@ namespace DrownedDream
         {
             for (int i = _mapContent.childCount - 1; i >= 0; i--) Destroy(_mapContent.GetChild(i).gameObject);
             _blinkMarkers.Clear();
+            _bossMapImage = null;
             if (!Room.TryGetWorldBounds(out var world)) return;
 
             float scale = Mathf.Min(MapSize / world.size.x, MapSize / world.size.y);
@@ -277,12 +328,42 @@ namespace DrownedDream
             if (room == null || !room.Visited) return;
 
             var color = boss.IsSealed ? _sealedBossColor : _bossColor;
-            var size = new Vector2(Mathf.Max(12f, b.size.x * scale), Mathf.Max(12f, b.size.y * scale));
+            bool animated = _bossMapFrames != null && _bossMapFrames.Length > 0 && _bossMapFrames[0] != null;
+            float h = Mathf.Max(12f, b.size.y * scale);
+            // 有動畫圖：依圖的長寬比、高度同 Boss 判定高；沒有圖：判定範圍色塊
+            var size = animated
+                ? new Vector2(h * _bossMapFrames[0].rect.width / _bossMapFrames[0].rect.height, h)
+                : new Vector2(Mathf.Max(12f, b.size.x * scale), h);
             var rt = MapRect("Boss", toMap(b.center) - size / 2f, size);
-            UIFactory.Image(rt, new Color(color.r, color.g, color.b, 0.55f));
+            if (animated)
+            {
+                _bossMapImage = UIFactory.Image(rt, boss.IsSealed ? new Color(0.5f, 0.5f, 0.55f, 0.7f) : Color.white);
+                _bossMapImage.preserveAspect = true;
+                _bossMapImage.sprite = _bossMapFrames[_bossMapFrame % _bossMapFrames.Length];
+            }
+            else UIFactory.Image(rt, new Color(color.r, color.g, color.b, 0.55f));
             var label = MapRect("BossLabel", toMap(new Vector2(b.center.x, b.max.y)) + new Vector2(-60f, 2f), new Vector2(120f, 28f));
             UIFactory.Text(label, boss.IsSealed ? "邪神（已封印）" : "邪神", 20, TextAnchor.MiddleCenter, color);
         }
+
+        /// <summary>小地圖 Boss 逐格播放（照 boss.gif 每格時間）。</summary>
+        private void TickBossMap(float dt)
+        {
+            if (_bossMapImage == null || _bossMapFrames == null || _bossMapFrames.Length <= 1) return;
+            _bossMapTimer += dt;
+            float d = BossMapDuration(_bossMapFrame);
+            while (_bossMapTimer >= d)
+            {
+                _bossMapTimer -= d;
+                _bossMapFrame = (_bossMapFrame + 1) % _bossMapFrames.Length;
+                d = BossMapDuration(_bossMapFrame);
+            }
+            _bossMapImage.sprite = _bossMapFrames[_bossMapFrame];
+        }
+
+        /// <summary>取得小地圖 Boss 某格秒數（至少 0.01 秒）。</summary>
+        private float BossMapDuration(int i) =>
+            Mathf.Max(0.01f, _bossMapDurations != null && i < _bossMapDurations.Length ? _bossMapDurations[i] : 0.08f);
 
         /// <summary>在小地圖內建立左下角錨點的矩形。</summary>
         private RectTransform MapRect(string name, Vector2 pos, Vector2 size) =>

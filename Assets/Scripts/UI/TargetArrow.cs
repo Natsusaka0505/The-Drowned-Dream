@@ -4,7 +4,7 @@ using UnityEngine.UI;
 namespace DrownedDream
 {
     /// <summary>
-    /// 畫面邊緣的方向箭頭：指向最後的封印道具寶箱（目標在畫面外時顯示，進入畫面或被打開後隱藏）。
+    /// 畫面邊緣的方向箭頭：指向一個目標（封印道具寶箱），目標在畫面外時顯示，進入畫面或沒有目標時隱藏。
     /// </summary>
     public class TargetArrow
     {
@@ -27,7 +27,7 @@ namespace DrownedDream
         {
             _root = root;
             _color = color;
-            _arrow = UIFactory.Rect("FinalSealArrow", root, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(46f, 60f));
+            _arrow = UIFactory.Rect("TargetArrow", root, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(46f, 60f));
             var tri = UIFactory.Rect("Triangle", _arrow, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0f), Vector2.zero, new Vector2(46f, 60f));
             _image = UIFactory.Image(tri, color);
             _image.sprite = HazardSprites.Spike; // 尖端朝上的三角形，整體旋轉指向目標
@@ -36,14 +36,9 @@ namespace DrownedDream
             SetVisible(false);
         }
 
-        /// <summary>每幀更新：找最後封印寶箱，畫面外就把箭頭放在邊緣並指向它。</summary>
-        public void Tick()
+        /// <summary>每幀更新：target 在畫面外就把箭頭放在邊緣並指向它（label = 距離前的文字；target 為 null 時隱藏）。</summary>
+        public void Tick(Transform target, string label)
         {
-            TreasureChest target = null;
-            foreach (var c in TreasureChest.All)
-            {
-                if (c != null && c.IsFinalSeal && !c.IsOpened) { target = c; break; }
-            }
             var cam = Camera.main;
             if (target == null || cam == null)
             {
@@ -71,9 +66,19 @@ namespace DrownedDream
             _label.rectTransform.anchoredPosition = pos - dir * 55f;
 
             float dist = Vector2.Distance(target.transform.position, cam.transform.position);
-            _label.text = $"最後的雕像 {dist:0}m";
+            _label.text = $"{label} {dist:0}m";
             float pulse = 0.6f + 0.4f * Mathf.Abs(Mathf.Sin(Time.unscaledTime * 4f));
             _image.color = new Color(_color.r, _color.g, _color.b, pulse);
+        }
+
+        /// <summary>箭頭顏色。</summary>
+        public Color Color => _color;
+
+        /// <summary>移除箭頭物件。</summary>
+        public void Destroy()
+        {
+            Object.Destroy(_arrow.gameObject);
+            Object.Destroy(_label.gameObject);
         }
 
         /// <summary>顯示 / 隱藏箭頭與文字。</summary>

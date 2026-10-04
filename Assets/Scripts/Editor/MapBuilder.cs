@@ -29,8 +29,14 @@ namespace DrownedDream.EditorTools
         private const float TerrainOverlap = 1.02f;
         /// <summary>地形 Sorting Order。</summary>
         private const int TerrainOrder = -6;
-        /// <summary>裝飾 Sorting Order。</summary>
-        private const int DecorOrder = -5;
+        /// <summary>裝飾 Sorting Order（2026-10-04 由 -5 改為 -3，排在牆面石塊之上）。</summary>
+        private const int DecorOrder = -3;
+        /// <summary>牆面石條 / 石柱 Sorting Order（地形之上）。</summary>
+        private const int WallStoneOrder = -5;
+        /// <summary>凸塊大石塊 Sorting Order（石條之上）。</summary>
+        private const int WallRockOrder = -4;
+        /// <summary>newWall 牆面美術資料夾。</summary>
+        private const string WallStoneArtDir = "Assets/Art/Map-rock";
         /// <summary>同一排裝飾之間最少間隔格數（避免擠在一起）。</summary>
         private const int DecorSpacing = 2;
 
@@ -78,7 +84,12 @@ namespace DrownedDream.EditorTools
                 }
             }
             // 用美術圖透明度當碰撞時，美術圖本身就是地形，不再自動貼地形圖塊
-            if (!config.CollisionFromMapAlpha) BuildTerrain(config, root.transform, solid);
+            if (!config.CollisionFromMapAlpha)
+            {
+                BuildTerrain(config, root.transform, solid);
+                EnsureWallStones(config);
+                BuildWallStones(config, root.transform, solid);
+            }
             return BuildRooms(config, root.transform);
         }
 
@@ -340,6 +351,197 @@ namespace DrownedDream.EditorTools
             }
             var decorMap = MakeTilemap(root, "Decor", DecorOrder);
             decorMap.SetTiles(decorPos.ToArray(), decorList.ToArray());
+        }
+
+        // ───────────────────────── 牆面石塊（newWall 美術） ─────────────────────────
+
+        /// <summary>TerrainTileSet 的牆面石塊欄位空著、且有 newWall 美術時補上（已設定的不動）。</summary>
+        public static void EnsureWallStones(MapConfig config)
+        {
+            var set = config.Terrain;
+            if (set == null || (set.WallStonesH != null && set.WallStonesH.Length > 0)) return;
+            string P(string name) => $"{WallStoneArtDir}/{name}.png";
+            if (!File.Exists(P("wall-1"))) return;
+            EditorBuildUtil.Wire(set,
+                ("_wallStonesH", new Object[] { LoadSprite(P("wall-1")), LoadSprite(P("wall-3")) }),
+                ("_wallStonesV", new Object[] { LoadSprite(P("wall-2")), LoadSprite(P("wall-4")) }),
+                ("_wallRocks", new Object[] { LoadSprite(P("rock")), LoadSprite(P("rock1")) }));
+            EditorUtility.SetDirty(set);
+        }
+
+        /// <summary>石塊圖的可見範圍（扣掉透明邊）：大小與中心相對 pivot 的位移（單位）。</summary>
+        private struct StoneArt
+        {
+            /// <summary>圖。</summary>
+            public Sprite Sprite;
+            /// <summary>可見範圍大小（單位）。</summary>
+            public Vector2 Size;
+            /// <summary>可見範圍中心相對 pivot（單位）。</summary>
+            public Vector2 Center;
+        }
+
+        /// <summary>讀取每張石塊圖的不透明外框（alpha &gt; 20）。</summary>
+        private static StoneArt[] LoadStoneArt(Sprite[] sprites)
+        {
+            var list = new List<StoneArt>();
+            if (sprites == null) return list.ToArray();
+            foreach (var sp in sprites)
+            {
+                if (sp == null) continue;
+                var tex = ReadTexture(sp.texture);
+                var px = tex.GetPixels32();
+                int w = tex.width, h = tex.height, x0 = w, y0 = h, x1 = -1, y1 = -1;
+                for (int y = 0; y < h; y++)
+                {
+                    for (int x = 0; x < w; x++)
+                    {
+                        if (px[y * w + x].a <= 20) continue;
+                        if (x < x0) x0 = x;
+                        if (x > x1) x1 = x;
+                        if (y < y0) y0 = y;
+                        if (y > y1) y1 = y;
+                    }
+                }
+                Object.DestroyImmediate(tex);
+                if (x1 < 0) continue;
+                float ppu = sp.pixelsPerUnit;
+                list.Add(new StoneArt
+                {
+                    Sprite = sp,
+                    Size = new Vector2(x1 - x0 + 1, y1 - y0 + 1) / ppu,
+                    Center = (new Vector2((x0 + x1 + 1) / 2f, (y0 + y1 + 1) / 2f) - sp.pivot) / ppu,
+                });
+            }
+            return list.ToArray();
+        }
+
+        /// <summary>
+        /// 沿牆鋪 newWall 石塊（純外觀，碰撞不變）：
+        /// 每道牆面取牆的中線（雙層邊界的接縫；朝空間的那一側往牆內 1 格），水平牆鋪橫向石條、垂直牆鋪直向石柱，
+        /// 依段長平均分配、相鄰略重疊；短而厚、從地面凸起的方塊（貼地方塊等）整塊換成大石塊。
+        /// </summary>
+        private static void BuildWallStones(MapConfig config, Transform root, bool[,] solid)
+        {
+            var set = config.Terrain;
+            if (set == null || solid == null) return;
+            var horiz = LoadStoneArt(set.WallStonesH);
+            var vert = LoadStoneArt(set.WallStonesV);
+            var rocks = LoadStoneArt(set.WallRocks);
+            if (horiz.Length == 0 && vert.Length == 0) return;
+
+            float c = config.MaskCellPixels / (float)config.PixelsPerUnit;
+            int w = solid.GetLength(0), h = solid.GetLength(1);
+            bool Solid(int x, int y) => x < 0 || y < 0 || x >= w || y >= h || solid[x, y];
+            float T = set.WallThickness;
+            var parent = new GameObject("WallStones").transform;
+            parent.SetParent(root, false);
+
+            // 牆面中線：水平線索引 L → 世界 y = L*c；垂直線索引 L → 世界 x = L*c
+            var hLines = new Dictionary<int, SortedSet<int>>();
+            var vLines = new Dictionary<int, SortedSet<int>>();
+            void Add(Dictionary<int, SortedSet<int>> d, int line, int v)
+            {
+                if (!d.TryGetValue(line, out var set2)) d[line] = set2 = new SortedSet<int>();
+                set2.Add(v);
+            }
+
+            // 先找凸塊：朝上的表面連續段，長 4~12 格，往下 2~8 列後兩側才變實心（= 從地面凸起）
+            var rockCells = new HashSet<Vector2Int>();
+            for (int y = 0; y < h; y++)
+            {
+                int x = 0;
+                while (x < w)
+                {
+                    if (!solid[x, y] || Solid(x, y + 1)) { x++; continue; }
+                    int x0 = x;
+                    while (x < w && solid[x, y] && !Solid(x, y + 1)) x++;
+                    int x1 = x - 1;
+                    int len = x1 - x0 + 1;
+                    if (rocks.Length == 0 || len < 4 || len > 12) continue;
+                    int r = y;
+                    while (r >= 0 && !Solid(x0 - 1, r) && !Solid(x1 + 1, r)) r--;
+                    int rows = y - r;
+                    if (rows < 2 || rows > 8) continue;
+                    var art = rocks[(int)(Hash(x0, y, set.Seed, 30) * rocks.Length) % rocks.Length];
+                    var rect = Rect.MinMaxRect(x0 * c, (r + 1) * c, (x1 + 1) * c, (y + 1) * c);
+                    PlaceStone(parent, art, rect.center, new Vector2(rect.width * 1.12f, rect.height * 1.2f), Hash(x0, y, set.Seed, 31) < 0.5f, WallRockOrder);
+                    for (int xx = x0; xx <= x1; xx++)
+                    {
+                        for (int yy = r + 1; yy <= y; yy++) rockCells.Add(new Vector2Int(xx, yy)); // 整塊都由大石塊表現，不再鋪石條
+                    }
+                }
+            }
+
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    if (!solid[x, y] || rockCells.Contains(new Vector2Int(x, y))) continue;
+                    if (!Solid(x, y + 1)) Add(hLines, y, x);           // 地板 / 平台頂
+                    if (!Solid(x, y - 1)) Add(hLines, y + 1, x);   // 天花板
+                    if (!Solid(x - 1, y)) Add(vLines, x + 1, y);   // 牆面朝左
+                    if (!Solid(x + 1, y)) Add(vLines, x, y);       // 牆面朝右
+                }
+            }
+
+            // 每條線切成連續段，段兩端各往外延伸半個厚度蓋住轉角
+            foreach (var kv in hLines) FillLine(kv.Key, kv.Value, true);
+            foreach (var kv in vLines) FillLine(kv.Key, kv.Value, false);
+
+            void FillLine(int line, SortedSet<int> cells, bool horizontal)
+            {
+                var pool = horizontal ? horiz : vert;
+                if (pool.Length == 0) return;
+                int start = int.MinValue, prev = int.MinValue;
+                foreach (int v in cells)
+                {
+                    if (v != prev + 1)
+                    {
+                        if (start != int.MinValue) Segment(line, start, prev, horizontal, pool);
+                        start = v;
+                    }
+                    prev = v;
+                }
+                if (start != int.MinValue) Segment(line, start, prev, horizontal, pool);
+            }
+
+            void Segment(int line, int from, int to, bool horizontal, StoneArt[] pool)
+            {
+                float a0 = from * c - T * 0.45f;
+                float a1 = (to + 1) * c + T * 0.45f;
+                float length = a1 - a0;
+                // 一塊石頭在指定厚度下的自然長度，決定要放幾塊
+                var sample = pool[0];
+                float natural = (horizontal ? sample.Size.x / sample.Size.y : sample.Size.y / sample.Size.x) * T;
+                int n = Mathf.Max(1, Mathf.RoundToInt(length / (natural * (1f - set.WallOverlap))));
+                float step = length / n;
+                float piece = step * (1f + set.WallOverlap);
+                for (int i = 0; i < n; i++)
+                {
+                    float along = a0 + step * (i + 0.5f);
+                    int hx = horizontal ? Mathf.FloorToInt(along / c) : line;
+                    int hy = horizontal ? line : Mathf.FloorToInt(along / c);
+                    var art = pool[(int)(Hash(hx, hy, set.Seed, horizontal ? 40 : 41) * pool.Length) % pool.Length];
+                    var center = horizontal ? new Vector2(along, line * c) : new Vector2(line * c, along);
+                    var size = horizontal ? new Vector2(piece, T) : new Vector2(T, piece);
+                    // 水平石條左右翻、垂直石柱上下翻（各自保持方向感）
+                    PlaceStone(parent, art, center, size, Hash(hx, hy, set.Seed, 42) < 0.5f, WallStoneOrder, horizontal);
+                }
+            }
+        }
+
+        /// <summary>放一塊石頭：可見範圍縮放到 size、中心對齊 center；flip 時水平（或垂直）翻轉。</summary>
+        private static void PlaceStone(Transform parent, StoneArt art, Vector2 center, Vector2 size, bool flip, int order, bool flipX = true)
+        {
+            var go = new GameObject(art.Sprite.name);
+            go.transform.SetParent(parent, false);
+            var sr = EditorBuildUtil.MakeSprite(go, art.Sprite, Color.white, order);
+            var scale = new Vector2(size.x / art.Size.x, size.y / art.Size.y);
+            var offset = art.Center;
+            if (flip && flipX) { sr.flipX = true; offset.x = -offset.x; }
+            if (flip && !flipX) { sr.flipY = true; offset.y = -offset.y; }
+            go.transform.localScale = new Vector3(scale.x, scale.y, 1f);
+            go.transform.localPosition = center - new Vector2(offset.x * scale.x, offset.y * scale.y);
         }
 
         /// <summary>建立只顯示用的 Tilemap（受光材質、指定排序）。</summary>

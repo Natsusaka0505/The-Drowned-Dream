@@ -35,6 +35,9 @@ MonoBehaviour:
   _bubbleSpeed: 3
   _bubbleSize: 0.6
   _bubbleLifetime: 4
+  _bubbleFrames: []
+  _bubbleFrameDuration: 0.16
+  _bubbleArtScale: 1.6
   _spikeCooldown: 3
   _spikeWindup: 0.7
   _spikeActive: 0.3
@@ -52,19 +55,24 @@ MonoBehaviour:
   _sanityRestoreOnKill: 15
   _dropPrefab: {fileID: 5533108424267458306, guid: f42792adb77cc404cba79623134172b6, type: 3}
   _dropChance: 1
+  _hoverHeight: 0
+  _bobHeight: 0.08
+  _bobSpeed: 2.5
   _animFrames:
   - {fileID: 21300000, guid: b165062ea8fbe4a4f854fff813701166, type: 3}
   - {fileID: 21300000, guid: 04f6ea1a28357405897f34f84d82ded1, type: 3}
   - {fileID: 21300000, guid: 37249d32dd8ef455685b296c6dc8025f, type: 3}
   - {fileID: 21300000, guid: 5e25c4fcf7a3a4f94951db875d2c8f04, type: 3}
+  - {fileID: 21300000, guid: 91ec1830cf696450db9e724e877f6e95, type: 3}
   _animDurations:
   - 0.12
   - 0.12
   - 0.12
   - 0.12
+  - 0.12
+  _baseSprite: {fileID: 0}
+  _lookSprite: {fileID: 0}
+  _lookRadius: 0.22
   _tendrilSprite: {fileID: 21300000, guid: 8baa5a1ae31434b6d960688db4ba2357, type: 3}
   _color: {r: 0.4, g: 0.7, b: 0.35, a: 1}
   _size: {x: 0.8, y: 2}
-  _hoverHeight: 0
-  _bobHeight: 0.08
-  _bobSpeed: 2.5
