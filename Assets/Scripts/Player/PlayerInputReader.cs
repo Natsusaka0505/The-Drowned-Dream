@@ -19,6 +19,8 @@ namespace DrownedDream
         [SerializeField] private InputAction _breath = new InputAction("Breath", InputActionType.Button);
         /// <summary>互動（E）。</summary>
         [SerializeField] private InputAction _interact = new InputAction("Interact", InputActionType.Button);
+        /// <summary>往下（S、↓）：站在單向平台上時穿過平台往下掉。</summary>
+        [SerializeField] private InputAction _down = new InputAction("Down", InputActionType.Button);
         /// <summary>開關背包（Tab、I）。</summary>
         [SerializeField] private InputAction _inventory = new InputAction("Inventory", InputActionType.Button);
 
@@ -38,6 +40,8 @@ namespace DrownedDream
         public bool FirePressed => Active && _fire.WasPressedThisFrame();
         /// <summary>本幀按下憋氣。</summary>
         public bool BreathPressed => Active && _breath.WasPressedThisFrame();
+        /// <summary>往下鍵按住中（穿過單向平台用）。</summary>
+        public bool DownHeld => Active && _down.IsPressed();
         /// <summary>本幀按下互動。</summary>
         public bool InteractPressed => Active && _interact.WasPressedThisFrame();
         /// <summary>本幀按下背包鍵（暫停中也要能關閉，因此不受 Playing 限制）。</summary>
@@ -66,7 +70,7 @@ namespace DrownedDream
 
         /// <summary>所有輸入動作清單。</summary>
         private InputAction[] AllActions() =>
-            new[] { _move, _jump, _fire, _breath, _interact, _inventory };
+            new[] { _move, _jump, _fire, _breath, _interact, _inventory, _down };
 
         /// <summary>沒有綁定的動作套用預設按鍵。</summary>
         private void EnsureDefaultBindings()
@@ -82,6 +86,7 @@ namespace DrownedDream
             AddDefault(_fire, "<Keyboard>/space", "<Gamepad>/buttonWest");
             AddDefault(_breath, "<Keyboard>/k", "<Keyboard>/leftShift", "<Gamepad>/rightShoulder");
             AddDefault(_interact, "<Keyboard>/e", "<Gamepad>/buttonNorth");
+            AddDefault(_down, "<Keyboard>/s", "<Keyboard>/downArrow", "<Gamepad>/dpad/down");
             AddDefault(_inventory, "<Keyboard>/tab", "<Keyboard>/i", "<Gamepad>/select");
         }
 

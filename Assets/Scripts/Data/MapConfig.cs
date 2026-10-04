@@ -28,6 +28,10 @@ namespace DrownedDream
         [SerializeField] private Texture2D _farBackground;
         /// <summary>遠景背景圖（不碰撞，視差捲動）（唯讀）</summary>
         public Texture2D FarBackground => _farBackground;
+        /// <summary>遠景顏色倍率（越暗越像遠處；白色 = 原色）</summary>
+        [SerializeField] private Color _farBackgroundTint = new Color(0.85f, 0.9f, 1f, 1f);
+        /// <summary>遠景顏色倍率（唯讀）</summary>
+        public Color FarBackgroundTint => _farBackgroundTint;
         /// <summary>遠景跟隨攝影機的比例（1 = 跟著畫面不動，0 = 固定在世界）</summary>
         [Range(0f, 1f)]
         [SerializeField] private float _parallaxFollow = 0.9f;

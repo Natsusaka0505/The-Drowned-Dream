@@ -22,6 +22,38 @@ namespace DrownedDream.EditorTools
         /// <summary>平台 Prefab 資料夾（隊友製作的 float1~6）。</summary>
         private const string PlatformPrefabDir = "Assets/Prefabs/float";
 
+        /// <summary>
+        /// 程式是否還沒編譯完：正在編譯，或 Assets/Scripts 裡有 .cs 比已載入的編譯結果還新（剛存檔、Unity 還沒開始編譯）。
+        /// 這時建置會用到舊程式，必須擋下。
+        /// </summary>
+        public static bool ScriptsOutOfDate(out string reason)
+        {
+            reason = null;
+            if (EditorApplication.isCompiling)
+            {
+                reason = "腳本正在編譯中";
+                return true;
+            }
+            // 一般程式比對 Assembly-CSharp.dll、Editor 資料夾比對 Assembly-CSharp-Editor.dll（Unity 只在內容變動時才重寫各自的 dll）
+            string dir = Path.Combine("Library", "ScriptAssemblies");
+            string runtimeDll = Path.Combine(dir, "Assembly-CSharp.dll");
+            string editorDll = Path.Combine(dir, "Assembly-CSharp-Editor.dll");
+            if (!File.Exists(runtimeDll) || !File.Exists(editorDll)) return false;
+            var runtimeBuilt = File.GetLastWriteTimeUtc(runtimeDll);
+            var editorBuilt = File.GetLastWriteTimeUtc(editorDll);
+            foreach (var cs in Directory.GetFiles(Path.Combine("Assets", "Scripts"), "*.cs", SearchOption.AllDirectories))
+            {
+                bool isEditor = cs.Replace('\\', '/').Contains("/Editor/");
+                var built = isEditor ? editorBuilt : runtimeBuilt;
+                if (File.GetLastWriteTimeUtc(cs) > built.AddSeconds(1))
+                {
+                    reason = $"程式檔 {Path.GetFileName(cs)} 比編譯結果新（Unity 還沒重新編譯）";
+                    return true;
+                }
+            }
+            return false;
+        }
+
         /// <summary>原型配置：中央 2×2 合成 Boss 房、依程式放關卡內容，回傳玩家起點。</summary>
         private static Vector2 BuildPrototypeContent(DataSet d, Room[,] rooms)
         {
@@ -54,9 +86,9 @@ namespace DrownedDream.EditorTools
             }
 
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
-            if (EditorApplication.isCompiling)
+            if (ScriptsOutOfDate(out string reason))
             {
-                EditorUtility.DisplayDialog("產生關卡範本", "腳本正在編譯中，請等右下角轉圈結束後再執行一次。", "OK");
+                EditorUtility.DisplayDialog("產生關卡範本", reason + "。\n請等右下角轉圈結束後再執行一次。", "OK");
                 return;
             }
             InitShared();

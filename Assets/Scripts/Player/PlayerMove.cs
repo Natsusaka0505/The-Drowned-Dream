@@ -20,6 +20,14 @@ namespace DrownedDream
         private PlayerStatus _status;
         /// <summary>精神錯亂（提供錯亂後的輸入）。</summary>
         private PlayerConfusion _confusion;
+        /// <summary>原始輸入（往下穿過單向平台用，不受錯亂影響）。</summary>
+        private PlayerInputReader _input;
+        /// <summary>正在穿過的單向平台（暫時忽略碰撞）。</summary>
+        private Collider2D _dropPlatform;
+        /// <summary>穿過平台剩餘秒數（時間到恢復碰撞）。</summary>
+        private float _dropTimer;
+        /// <summary>穿過單向平台時忽略碰撞的秒數。</summary>
+        private const float DropThroughTime = 0.35f;
 
         /// <summary>本幀水平輸入（已套用錯亂）。</summary>
         private float _moveX;
@@ -52,6 +60,7 @@ namespace DrownedDream
             _collider = GetComponent<BoxCollider2D>();
             _status = GetComponent<PlayerStatus>();
             _confusion = GetComponent<PlayerConfusion>();
+            _input = GetComponent<PlayerInputReader>();
             _body.gravityScale = Config.GravityScale;
             _body.freezeRotation = true;
             _body.interpolation = RigidbodyInterpolation2D.Interpolate;
@@ -82,6 +91,7 @@ namespace DrownedDream
         private void FixedUpdate()
         {
             float dt = Time.fixedDeltaTime;
+            UpdateDropThrough(dt);
             bool wasGrounded = IsGrounded;
             IsGrounded = CheckGrounded();
             if (!IsGrounded) _airFallSpeed = Mathf.Max(_airFallSpeed, -_body.linearVelocity.y);
@@ -115,6 +125,36 @@ namespace DrownedDream
             _body.gravityScale = velocity.y < 0f ? Config.GravityScale * Config.FallGravityMultiplier : Config.GravityScale;
             if (velocity.y < -Config.MaxFallSpeed) velocity.y = -Config.MaxFallSpeed;
             _body.linearVelocity = velocity;
+        }
+
+        /// <summary>
+        /// 往下穿過單向平台：站在有 PlatformEffector2D 的平台上按住往下 → 暫時忽略與該平台的碰撞，
+        /// 時間到再恢復（實心的牆 / 地板不受影響）。
+        /// </summary>
+        private void UpdateDropThrough(float dt)
+        {
+            if (_dropPlatform != null)
+            {
+                _dropTimer -= dt;
+                if (_dropTimer <= 0f)
+                {
+                    Physics2D.IgnoreCollision(_collider, _dropPlatform, false);
+                    _dropPlatform = null;
+                }
+                return;
+            }
+            if (!IsGrounded || _input == null || !_input.DownHeld) return;
+
+            var bounds = _collider.bounds;
+            var hit = Physics2D.BoxCast(new Vector2(bounds.center.x, bounds.min.y), new Vector2(bounds.size.x * 0.9f, 0.05f), 0f,
+                Vector2.down, Config.GroundCheckDistance + 0.05f, _groundMask);
+            if (hit.collider == null || hit.collider.GetComponent<PlatformEffector2D>() == null) return;
+
+            _dropPlatform = hit.collider;
+            _dropTimer = DropThroughTime;
+            Physics2D.IgnoreCollision(_collider, _dropPlatform, true);
+            IsGrounded = false;
+            _coyoteTimer = 0f;
         }
 
         /// <summary>傳送到指定位置並清除速度（復活用）。</summary>

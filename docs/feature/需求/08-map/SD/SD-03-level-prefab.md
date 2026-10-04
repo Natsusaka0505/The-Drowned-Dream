@@ -32,7 +32,7 @@
 
 ## 平台 Layer
 
-隊友的 `float1~6` 在 Default Layer，玩家站不上去。不改 Prefab 本身，而是在關卡 Prefab 的 `Platforms` 物件掛 `World/PlatformGroup`：執行時把底下所有物件設成 Ground Layer，並加上 `PlatformEffector2D` 變成**單向平台**（可從下方跳穿；`_oneWay` 可關）。原型地圖也用同一套（2026-10-04）。**新增平台時放在 `Platforms` 底下即可。**
+隊友的 `float1~6` 在 Default Layer，玩家站不上去。不改 Prefab 本身，而是在關卡 Prefab 的 `Platforms` 物件掛 `World/PlatformGroup`：執行時把底下所有物件設成 Ground Layer，並加上 `PlatformEffector2D` 變成**單向平台**（可從下方跳穿；`_oneWay` 可關）。另外 float1~6 的 Tilemap 上掛了 **Dynamic 剛體**（會受重力掉落、被推走），`PlatformGroup` 執行時一律改成 Static。原型地圖也用同一套（2026-10-04）。**新增平台時放在 `Platforms` 底下即可。**
 
 ## 敵人在手擺關卡的移動
 

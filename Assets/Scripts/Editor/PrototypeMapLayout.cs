@@ -69,6 +69,10 @@ namespace DrownedDream.EditorTools
         /// 由 PrototypeSceneBuilder 放入 float Prefab（單向平台，可從下方跳穿）。浮台不畫在遮罩圖裡。
         /// </summary>
         public static readonly List<Vector2> PlatformSpots = new List<Vector2>();
+        /// <summary>每個浮台的長度（單位，與 PlatformSpots 一一對應；隨機但固定種子，每次重建結果相同）。</summary>
+        public static readonly List<float> PlatformLengths = new List<float>();
+        /// <summary>浮台長度亂數（固定種子）。</summary>
+        private static System.Random s_random = new System.Random(20261004);
         /// <summary>浮台寬度（float Prefab：12 格 × 0.5 縮放 = 6 單位）。</summary>
         public const float PlatformWidth = 6f;
         /// <summary>階梯每層高差（單位；跳躍高度約 2.58，浮台為單向不會撞頭）。</summary>
@@ -115,6 +119,8 @@ namespace DrownedDream.EditorTools
         {
             var w = new bool[Cells, Cells];
             PlatformSpots.Clear();
+            PlatformLengths.Clear();
+            s_random = new System.Random(20261004);
 
             // 每個區塊四周 1 格牆（相鄰區塊共用邊界 = 2 格厚）
             for (int c = 0; c < Grid; c++)
@@ -155,16 +161,13 @@ namespace DrownedDream.EditorTools
                 int ox = link.x * RoomCells;
                 int upperY = link.y * RoomCells;
                 int lowerY = upperY - RoomCells;
-                // 階梯放在門的另一側：第 0 欄只有右門 → 階梯在左；其餘（目前是第 3 欄，只有左門）→ 階梯在右
-                bool stairsRight = link.x != 0;
-                int X(int x) => stairsRight ? x : RoomCells - 1 - x; // 以「階梯在右」設計，左側時鏡像
-
                 for (int x = 13; x <= 18; x++)
                 {
                     w[ox + x, upperY] = false;      // 上方區塊地板
                     w[ox + x, upperY - 1] = false;  // 下方區塊天花板
                 }
-                for (int x = 13; x <= 24; x++) w[ox + X(x), upperY - 1] = false; // 最上層石台的頭頂空間
+                // 下方區塊天花板（雙層邊界的下層）大範圍挖開，最上面幾階浮台不會卡頭；上方區塊地板仍在，只有洞口能穿過
+                for (int x = 4; x <= 27; x++) w[ox + x, upperY - 1] = false;
 
                 AddStairs(link.x, link.y - 1, 0);
             }
@@ -197,13 +200,23 @@ namespace DrownedDream.EditorTools
             for (int i = 0; i < steps; i++)
             {
                 float x = (i % 2 == extraSteps % 2) ? 4.5f : 11.5f;
-                AddPlatform(ox + x, oy + 2.5f + i * StepHeight);
+                AddPlatform(ox + x, oy + 2.5f + i * StepHeight, 4f, 6f);
             }
-            AddPlatform(ox + 8f, oy + 2.5f + steps * StepHeight); // 洞口正下方（頂面 14.5，上方地板 16.5）
+            AddPlatform(ox + 8f, oy + 2.5f + steps * StepHeight, 4f, 6f); // 洞口正下方（頂面 14.5，上方地板 16.5）
         }
 
-        /// <summary>加一個浮台（x = 中心、top = 頂面高度，單位）。</summary>
-        private static void AddPlatform(float x, float top) => PlatformSpots.Add(new Vector2(x, top - 0.5f));
+        /// <summary>
+        /// 加一個浮台（x = 中心、top = 頂面高度，單位）；長度在 minLength~maxLength 間隨機（0.5 為單位、偶數格，置中不變）。
+        /// 階梯用 4~6：兩欄內緣最遠相距 3 單位，跳得過去。
+        /// </summary>
+        private static void AddPlatform(float x, float top, float minLength = 4f, float maxLength = 7f)
+        {
+            int minTiles = Mathf.RoundToInt(minLength * 2f) / 2;
+            int maxTiles = Mathf.RoundToInt(maxLength * 2f) / 2;
+            int pairs = s_random.Next(minTiles, maxTiles + 1); // 以 2 格（1 單位）為一組，保持偶數格、中心不偏
+            PlatformSpots.Add(new Vector2(x, top - 0.5f));
+            PlatformLengths.Add(pairs);
+        }
 
         /// <summary>
         /// 右側直井：打通上下兩個區塊之間的牆。上方區塊已由 VerticalLinks 放了階梯浮台，
@@ -223,7 +236,7 @@ namespace DrownedDream.EditorTools
             float sy = RightShaft.lower.y * RoomUnits;
             for (int i = 0; i < 8; i++) // 頂面 2.5 ~ 16.5；上方區塊第一層頂面 18.5（中心 4.5）→ 這裡最後一層放 11.5 交錯
             {
-                AddPlatform(sx + (i % 2 == 0 ? 11.5f : 4.5f), sy + 2.5f + i * StepHeight);
+                AddPlatform(sx + (i % 2 == 0 ? 11.5f : 4.5f), sy + 2.5f + i * StepHeight, 4f, 6f);
             }
         }
 
@@ -248,15 +261,6 @@ namespace DrownedDream.EditorTools
             // 右側鏡像
             Fill(w, x1 - 17, y0 + 1, 6, 4);
             AddPlatform((x1 + 1) / 2f - 3.5f, y0 / 2f + 4.5f);
-        }
-
-        /// <summary>將區塊內局部格範圍（含頭尾，x 經過鏡像函式）設為牆。</summary>
-        private static void FillLocal(bool[,] w, int ox, int oy, System.Func<int, int> mapX, int x0, int x1, int y0, int y1)
-        {
-            for (int x = x0; x <= x1; x++)
-            {
-                for (int y = y0; y <= y1; y++) w[ox + mapX(x), oy + y] = true;
-            }
         }
 
         /// <summary>將矩形格設為牆。</summary>

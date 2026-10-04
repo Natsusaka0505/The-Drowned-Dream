@@ -4,7 +4,7 @@ namespace DrownedDream
 {
     /// <summary>
     /// 平台群組：放在關卡 Prefab 的 Platforms 物件上，執行時把底下所有平台（例如 float1~6 Prefab）設成 Ground Layer，
-    /// 讓玩家站得上去、魚叉插得進去，並加上 PlatformEffector2D 變成單向平台（可從下方跳穿、站在上面），不需要改動平台 Prefab 本身。
+    /// 讓玩家站得上去、魚叉插得進去，Prefab 上的剛體一律改 Static（不會掉落），並加上 PlatformEffector2D 變成單向平台（可從下方跳穿、站在上面），不需要改動平台 Prefab 本身。
     /// </summary>
     public class PlatformGroup : MonoBehaviour
     {
@@ -25,6 +25,9 @@ namespace DrownedDream
                 return;
             }
             foreach (var t in GetComponentsInChildren<Transform>(true)) t.gameObject.layer = layer;
+
+            // float1~6 的 Tilemap 上掛了 Dynamic 剛體，會受重力往下掉、被玩家推走 → 一律改成 Static
+            foreach (var body in GetComponentsInChildren<Rigidbody2D>(true)) body.bodyType = RigidbodyType2D.Static;
             if (!_oneWay) return;
 
             foreach (var col in GetComponentsInChildren<Collider2D>(true))

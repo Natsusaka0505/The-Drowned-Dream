@@ -28,7 +28,9 @@ namespace DrownedDream.EditorTools
         /// <summary>Prefab 目錄。</summary>
         private const string PrefabDir = "Assets/Prefabs";
         /// <summary>遠景背景圖路徑。</summary>
-        public const string FarBackgroundPath = "Assets/Art/Background/background.png";
+        public const string FarBackgroundPath = "Assets/Art/Background/background_far.png";
+        /// <summary>遠景背景原圖（美術交付；background_far.png 由它模糊 + 降對比 + 暗部拉向深藍產生，避免岩石剪影被誤認成牆）。</summary>
+        public const string FarBackgroundSourcePath = "Assets/Art/Background/background.png";
         /// <summary>地圖設定資產路徑。</summary>
         public const string MapConfigPath = "Assets/Data/Map/MapConfig.asset";
         /// <summary>探索 BGM 路徑。</summary>
@@ -125,9 +127,9 @@ namespace DrownedDream.EditorTools
             }
             // 先匯入新檔；若因此觸發腳本重新編譯，這次建置會用到舊程式 → 擋下來請使用者稍後再按
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
-            if (EditorApplication.isCompiling)
+            if (ScriptsOutOfDate(out string reason))
             {
-                EditorUtility.DisplayDialog("重建原型場景", "腳本正在編譯中，建出來會是舊版本。\n請等右下角轉圈結束後再執行一次。", "OK");
+                EditorUtility.DisplayDialog("重建原型場景", reason + "，現在建出來會是舊版本。\n請等右下角轉圈結束後再執行一次。", "OK");
                 return;
             }
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
@@ -238,8 +240,10 @@ namespace DrownedDream.EditorTools
                 EditorUtility.SetDirty(d.Map);
             }
             MapBuilder.EnsureTerrainSet(d.Map); // 舊的 MapConfig 沒有地形素材時補上預設切片
-            if (d.Map.FarBackground == null)
+            var farSource = AssetDatabase.LoadAssetAtPath<Texture2D>(FarBackgroundSourcePath);
+            if (d.Map.FarBackground == null || d.Map.FarBackground == farSource)
             {
+                // 還沒設定，或仍指向原圖 → 改用處理過的遠景（企劃改成別張圖時不動）
                 // 舊的 MapConfig 沒有遠景欄位時補上（不覆蓋企劃已設定的值）
                 var far = AssetDatabase.LoadAssetAtPath<Texture2D>(FarBackgroundPath);
                 if (far != null)
@@ -601,19 +605,67 @@ namespace DrownedDream.EditorTools
             if (prefabs.Count == 0) Debug.LogWarning("[DrownedDream] 找不到 float 平台 Prefab，改用佔位方塊：" + PlatformPrefabDir);
 
             var spots = PrototypeMapLayout.PlatformSpots;
+            var lengths = PrototypeMapLayout.PlatformLengths;
             for (int i = 0; i < spots.Count; i++)
             {
+                float length = i < lengths.Count ? lengths[i] : PrototypeMapLayout.PlatformWidth;
                 if (prefabs.Count > 0)
                 {
-                    Place(prefabs[i % prefabs.Count], group, spots[i]);
+                    var inst = (GameObject)PrefabUtility.InstantiatePrefab(prefabs[i % prefabs.Count], group);
+                    inst.transform.position = spots[i];
+                    ResizeFloat(inst, length);
                     continue;
                 }
                 var go = new GameObject($"Platform{i}");
                 go.transform.SetParent(group, false);
                 go.transform.position = spots[i] + Vector2.up * 0.25f;
-                go.transform.localScale = new Vector3(PrototypeMapLayout.PlatformWidth, 0.5f, 1f);
+                go.transform.localScale = new Vector3(length, 0.5f, 1f);
                 MakeSprite(go, s_square, new Color(0.35f, 0.38f, 0.42f), 4);
                 go.AddComponent<BoxCollider2D>();
+            }
+        }
+
+        /// <summary>
+        /// 調整 float 浮台實例的長度（單位）：重排 Tilemap 那一排圖塊（保留左右端圖塊，中間圖塊循環補足或刪減），
+        /// 並把碰撞框寬度改成相同長度，中心不變。只改場景裡的實例（Prefab 覆寫），不動 Prefab 本身。
+        /// </summary>
+        private static void ResizeFloat(GameObject inst, float lengthUnits)
+        {
+            var tilemap = inst.GetComponentInChildren<UnityEngine.Tilemaps.Tilemap>();
+            if (tilemap == null) return;
+            float cellUnits = tilemap.layoutGrid != null ? tilemap.layoutGrid.cellSize.x * inst.transform.lossyScale.x : 0.5f;
+            int count = Mathf.Max(2, Mathf.RoundToInt(lengthUnits / Mathf.Max(0.01f, cellUnits)));
+
+            // 讀出原本那一排圖塊（依 x 排序）
+            tilemap.CompressBounds();
+            var bounds = tilemap.cellBounds;
+            var row = new System.Collections.Generic.List<UnityEngine.Tilemaps.TileBase>();
+            int rowY = bounds.yMin;
+            for (int x = bounds.xMin; x < bounds.xMax; x++)
+            {
+                var t = tilemap.GetTile(new Vector3Int(x, rowY, 0));
+                if (t != null) row.Add(t);
+            }
+            if (row.Count < 2) return;
+
+            var left = row[0];
+            var right = row[row.Count - 1];
+            var middle = row.GetRange(1, row.Count - 2);
+            tilemap.ClearAllTiles();
+            int start = -count / 2; // 置中：格 start ~ start+count-1
+            for (int i = 0; i < count; i++)
+            {
+                var tile = i == 0 ? left : i == count - 1 ? right : middle.Count > 0 ? middle[(i - 1) % middle.Count] : left;
+                tilemap.SetTile(new Vector3Int(start + i, rowY, 0), tile);
+            }
+            PrefabUtility.RecordPrefabInstancePropertyModifications(tilemap);
+
+            var box = tilemap.GetComponent<BoxCollider2D>();
+            if (box != null)
+            {
+                box.size = new Vector2(count, box.size.y);
+                box.offset = new Vector2(start + count / 2f, box.offset.y);
+                PrefabUtility.RecordPrefabInstancePropertyModifications(box);
             }
         }
 

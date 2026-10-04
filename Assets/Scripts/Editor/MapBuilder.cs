@@ -107,7 +107,7 @@ namespace DrownedDream.EditorTools
             go.transform.SetParent(root, false);
             var size = MapSizeUnits(config);
             go.transform.position = new Vector3(size.x / 2f, size.y / 2f, 0f);
-            var sr = EditorBuildUtil.MakeSprite(go, sprite, Color.white, -100);
+            var sr = EditorBuildUtil.MakeSprite(go, sprite, config.FarBackgroundTint, -100);
             var unlit = AssetDatabase.LoadAssetAtPath<Material>(EditorBuildUtil.SpriteUnlitMaterialPath);
             if (unlit != null) sr.sharedMaterial = unlit;
             var parallax = go.AddComponent<ParallaxBackground>();
