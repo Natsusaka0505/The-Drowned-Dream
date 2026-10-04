@@ -225,6 +225,8 @@ namespace DrownedDream
         /// <summary>本幀是否按下任意鍵 / 滑鼠左鍵（點在按鈕上不算）/ 手把 South。</summary>
         private static bool AnyPressed()
         {
+            if (QuitConfirmDialog.BlocksInput) return false; // 離開確認視窗開啟中 / 剛關閉
+            if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame) return false; // ESC 保留給離開確認
             if (Keyboard.current != null && Keyboard.current.anyKey.wasPressedThisFrame) return true;
             if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
                 return EventSystem.current == null || !EventSystem.current.IsPointerOverGameObject();

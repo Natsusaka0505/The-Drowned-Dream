@@ -45,7 +45,7 @@ namespace DrownedDream
         /// <summary>本幀按下互動。</summary>
         public bool InteractPressed => Active && _interact.WasPressedThisFrame();
         /// <summary>本幀按下背包鍵（暫停中也要能關閉，因此不受 Playing 限制）。</summary>
-        public bool InventoryPressed => !_locked && _inventory.WasPressedThisFrame();
+        public bool InventoryPressed => !_locked && !QuitConfirmDialog.IsOpen && _inventory.WasPressedThisFrame();
 
         /// <summary>鎖定 / 解鎖輸入。</summary>
         public void SetLocked(bool locked) => _locked = locked;

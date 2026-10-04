@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 
 namespace DrownedDream
@@ -26,7 +27,7 @@ namespace DrownedDream
         /// <summary>目前流程狀態（沒有 GameFlow 時視為遊玩中，方便單獨測試）。</summary>
         public static GameState State => Instance != null ? Instance._state : GameState.Playing;
         /// <summary>是否在遊玩中（輸入、計時只在此狀態運作）。</summary>
-        public static bool IsPlaying => State == GameState.Playing;
+        public static bool IsPlaying => State == GameState.Playing && !QuitConfirmDialog.IsOpen;
 
         /// <summary>封面（Start / Quit）。</summary>
         [SerializeField] private TitleScreen _titleScreen;
@@ -34,6 +35,8 @@ namespace DrownedDream
         [SerializeField] private StoryPanel _storyPanel;
         /// <summary>測試用：跳過封面與開場。</summary>
         [SerializeField] private bool _skipIntro;
+        /// <summary>任何時候按 ESC 開啟「是否離開遊戲」確認視窗（再按一次 ESC 關閉）。</summary>
+        [SerializeField] private bool _escToQuit = true;
 
         [Header("[待確認] 開場 / 結局文字")]
         /// <summary>開場逐句文字。</summary>
@@ -61,11 +64,15 @@ namespace DrownedDream
 
         /// <summary>目前狀態。</summary>
         private GameState _state = GameState.Title;
+        /// <summary>離開確認視窗（執行時自動建立）。</summary>
+        private QuitConfirmDialog _quitDialog;
 
         /// <summary>註冊單例。</summary>
         private void Awake()
         {
             Instance = this;
+            _quitDialog = GetComponent<QuitConfirmDialog>();
+            if (_quitDialog == null) _quitDialog = gameObject.AddComponent<QuitConfirmDialog>();
         }
 
         /// <summary>訂閱封印事件。</summary>
@@ -104,6 +111,13 @@ namespace DrownedDream
 
             SetState(GameState.Intro);
             _storyPanel.Play(_introLines, () => SetState(GameState.Playing));
+        }
+
+        /// <summary>偵測 ESC 開關離開確認視窗（不受 timeScale 影響）。</summary>
+        private void Update()
+        {
+            if (_escToQuit && Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+                _quitDialog.Toggle();
         }
 
         /// <summary>清除單例並恢復時間流速。</summary>
