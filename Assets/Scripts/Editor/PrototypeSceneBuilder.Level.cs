@@ -171,8 +171,8 @@ namespace DrownedDream.EditorTools
         {
             var root = new GameObject("BossArena");
             var boss = MakeBoss(root.transform, Vector2.zero);
-            // Boss 外觀約 16.6 寬，祭壇放在 Boss 左側外面
-            MakeAltar(root.transform, boss, new Vector2(-11f, 0.5f));
+            // Boss 外觀約 16.6 寬，祭壇放在 Boss 左側外面（左外側鎖鏈地錨在 -11.8，祭壇放更外面）
+            MakeAltar(root.transform, boss, new Vector2(-14f, 0.5f));
             MakeBossArea(root.transform, boss, new Vector2(0f, 8f));
             return root;
         }

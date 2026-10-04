@@ -71,6 +71,18 @@ namespace DrownedDream.EditorTools
         };
         /// <summary>Boss 腳下浮岩圖（依 float / terrain 色票產生）。</summary>
         public const string BossRockPath = "Assets/Art/Boss/boss_rock.png";
+        /// <summary>鎖鏈正面環節圖。</summary>
+        public const string ChainLinkFacePath = "Assets/Art/Boss/chain_link_a.png";
+        /// <summary>鎖鏈側面環節圖。</summary>
+        public const string ChainLinkEdgePath = "Assets/Art/Boss/chain_link_b.png";
+        /// <summary>鎖鏈地錨圖。</summary>
+        public const string ChainAnchorPath = "Assets/Art/Boss/chain_anchor.png";
+        /// <summary>Boss 下方碎石骨堆圖。</summary>
+        public const string BossRubblePath = "Assets/Art/Boss/boss_rubble.png";
+        /// <summary>柔光圓點（綠霧粒子）。</summary>
+        public const string SoftGlowPath = "Assets/Art/Boss/soft_glow.png";
+        /// <summary>不受光的 Sprite 材質（粒子用）。</summary>
+        private const string SpriteUnlitMaterialPath = "Packages/com.unity.render-pipelines.universal/Runtime/Materials/Sprite-Unlit-Default.mat";
         /// <summary>封印祭壇圖（美術交付，裁掉透明邊；沒有就用佔位方塊）。</summary>
         public const string AltarSpritePath = "Assets/Art/Props/altar.png";
         /// <summary>復活點圖（美術交付，裁掉透明邊；沒有就用佔位方塊）。</summary>
@@ -611,7 +623,8 @@ namespace DrownedDream.EditorTools
             float arenaFloor = PrototypeMapLayout.ArenaFloorY;
             float arenaX = PrototypeMapLayout.ArenaCenterX;
             var boss = MakeBoss(root, new Vector2(arenaX, arenaFloor));
-            MakeAltar(root, boss, new Vector2(PrototypeMapLayout.BossArena.x * PrototypeMapLayout.RoomUnits + 3f, arenaFloor + 0.5f));
+            // 祭壇靠左牆（寬 3，左緣離牆約 0.1），避開 Boss 左外側鎖鏈的地錨
+            MakeAltar(root, boss, new Vector2(PrototypeMapLayout.BossArena.x * PrototypeMapLayout.RoomUnits + 2.1f, arenaFloor + 0.5f));
             // 第 5 個封印道具：第一次進 Boss 房後，從這些候選點（一般區塊地板）隨機出現
             MakeHiddenSealSpawner(root, d.ChestBlack, new[]
             {
@@ -918,12 +931,13 @@ namespace DrownedDream.EditorTools
             var go = new GameObject("Checkpoint");
             go.transform.SetParent(parent);
             go.transform.position = pos;
-            // pos 比地面高 0.6；有美術圖時底部貼地、高 2.2 單位，未啟用時偏暗，啟用後恢復原色
+            // pos 比地面高 0.6；有美術圖時底部貼地、高 2.2 單位；頂部眼睛打小範圍光（未啟用紅光、啟用後黃光）
             var col = go.AddComponent<BoxCollider2D>();
             col.size = new Vector2(1.2f, 1.6f);
-            if (MakePropSprite(go.transform, CheckpointSpritePath, new Vector2(0f, -0.6f), 0f, 2.2f, new Color(0.55f, 0.55f, 0.6f), 3))
+            if (MakePropSprite(go.transform, CheckpointSpritePath, new Vector2(0f, -0.6f), 0f, 2.2f, Color.white, 3))
             {
-                Wire(go.AddComponent<Checkpoint>(), ("_renderer", go.GetComponentInChildren<SpriteRenderer>()), ("_activeColor", Color.white));
+                var light = MakePointLight(go.transform, "TopLight", new Vector2(0f, 1.2f), new Color(1f, 0.15f, 0.12f), 1.6f, 0.15f, 1f);
+                Wire(go.AddComponent<Checkpoint>(), ("_renderer", go.GetComponentInChildren<SpriteRenderer>()), ("_activeColor", Color.white), ("_light", light));
             }
             else
             {
@@ -1124,12 +1138,14 @@ namespace DrownedDream.EditorTools
         /// <summary>Boss 整體縮放（外觀 + 判定一起放大；2026-10-04 調成 2）。</summary>
         private const float BossScale = 2f;
 
-        /// <summary>Boss 腳底離地面的高度（站在浮岩上）。</summary>
-        private const float BossHoverHeight = 4f;
+        /// <summary>Boss 腳底離地面的高度（下半身埋在浮岩後面）。</summary>
+        private const float BossHoverHeight = 3f;
         /// <summary>浮岩大小（寬 × 高，單位）。</summary>
-        private static readonly Vector2 BossRockSize = new Vector2(17f, 3.4f);
-        /// <summary>Boss 手掌壓進浮岩頂面的深度。</summary>
-        private const float BossRockOverlap = 0.35f;
+        private static readonly Vector2 BossRockSize = new Vector2(20f, 5f);
+        /// <summary>浮岩頂面比 Boss 腳底高多少（浮岩畫在 Boss 前面，遮住下半部的空隙）。</summary>
+        private const float BossRockCover = 3f;
+        /// <summary>Boss 圖的底色（略暗，讓紅光打亮的地方對比更明顯）。</summary>
+        private static readonly Color BossTint = new Color(0.78f, 0.76f, 0.8f);
 
         /// <summary>建立 Boss（feet = 房間地面位置）：Boss 站在浮岩上，周圍打紅綠光；碰撞框 4×6 × BossScale。</summary>
         private static BossController MakeBoss(Transform parent, Vector2 feet)
@@ -1148,7 +1164,9 @@ namespace DrownedDream.EditorTools
             if (lightningFx == null) Debug.LogWarning("[DrownedDream] 找不到落雷特效：" + LightningFxPath);
             Wire(boss, ("_renderer", sr), ("_projectileBlockMask", Mask(s_groundLayer)), ("_lightningFx", lightningFx), ("_hoverHeight", BossHoverHeight));
             Wire(go.GetComponent<FearSource>(), ("_radius", 18f), ("_drainPerSecond", 4f)); // Boss 變大，恐懼範圍跟著放大
-            MakeBossRock(parent, bossFeet + Vector2.up * BossRockOverlap);
+            MakeBossRock(parent, bossFeet + Vector2.up * BossRockCover);
+            MakeBossChains(parent, feet, bossFeet + Vector2.up * BossRockCover);
+            MakeBossMist(parent, feet);
             MakeBossLights(parent, bossFeet);
             return boss;
         }
@@ -1166,8 +1184,136 @@ namespace DrownedDream.EditorTools
                 Debug.LogWarning("[DrownedDream] 找不到浮岩圖：" + BossRockPath);
                 return;
             }
-            MakeSprite(go, sprite, Color.white, 7); // 在 Boss（8）後面
+            MakeSprite(go, sprite, Color.white, 9); // 在 Boss（8）前面，遮住下半部
             go.transform.localScale = new Vector3(BossRockSize.x / sprite.bounds.size.x, BossRockSize.y / sprite.bounds.size.y, 1f);
+        }
+
+        /// <summary>鎖鏈：(浮岩頂面相對位置 → 地面相對位置)，左右對稱各兩條。</summary>
+        private static readonly (Vector2 top, Vector2 ground)[] BossChains =
+        {
+            (new Vector2(-7.5f, -2.2f), new Vector2(-11.8f, 0f)), // 外側地錨往內收，讓出左側祭壇位置
+            (new Vector2(-3.5f, -3.2f), new Vector2(-6f, 0f)),
+            (new Vector2(3.5f, -3.2f), new Vector2(6f, 0f)),
+            (new Vector2(7.5f, -2.2f), new Vector2(11.8f, 0f)),
+        };
+        /// <summary>鎖鏈環節大小（寬 × 高，單位）。</summary>
+        private static readonly Vector2 ChainLinkSize = new Vector2(0.5f, 0.8f);
+        /// <summary>鎖鏈環節間距（單位）。</summary>
+        private const float ChainLinkSpacing = 0.58f;
+
+        /// <summary>
+        /// 封印鎖鏈 + 地面碎石骨堆（純外觀、無碰撞）：浮岩底下拉 4 條鎖鏈斜斜釘到地面，正面 / 側面環節交錯。
+        /// floor = 房間地面中央、rockTop = 浮岩頂面中央。
+        /// </summary>
+        private static void MakeBossChains(Transform parent, Vector2 floor, Vector2 rockTop)
+        {
+            var root = new GameObject("BossChains").transform;
+            root.SetParent(parent);
+            root.position = floor;
+            var face = LoadCenteredSprite(ChainLinkFacePath, SpriteAlignment.Center);
+            var edge = LoadCenteredSprite(ChainLinkEdgePath, SpriteAlignment.Center);
+            var anchor = LoadCenteredSprite(ChainAnchorPath, SpriteAlignment.BottomCenter);
+            var rubble = LoadCenteredSprite(BossRubblePath, SpriteAlignment.BottomCenter);
+
+            if (rubble != null)
+            {
+                var sr = MakeSprite(Child(root, "Rubble", Vector2.zero).gameObject, rubble, Color.white, 6);
+                FitSprite(sr, 11f, 0f);
+            }
+            if (face == null || edge == null) return;
+
+            for (int c = 0; c < BossChains.Length; c++)
+            {
+                var chain = Child(root, $"Chain{c}", Vector2.zero);
+                Vector2 from = rockTop + BossChains[c].top;
+                Vector2 to = floor + BossChains[c].ground + Vector2.up * 0.4f; // 接在地錨的環上
+                Vector2 dir = to - from;
+                int count = Mathf.Max(1, Mathf.RoundToInt(dir.magnitude / ChainLinkSpacing));
+                float angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg + 90f; // 環節圖是直的
+                for (int i = 0; i <= count; i++)
+                {
+                    bool isFace = i % 2 == 0;
+                    var link = Child(chain, $"Link{i}", Vector2.zero);
+                    link.position = from + dir * (i / (float)count);
+                    link.rotation = Quaternion.Euler(0f, 0f, angle);
+                    var sr = MakeSprite(link.gameObject, isFace ? face : edge, Color.white, 7); // 在浮岩（9）與 Boss（8）後面
+                    FitSprite(sr, isFace ? ChainLinkSize.x : ChainLinkSize.x * 0.4f, ChainLinkSize.y);
+                }
+                if (anchor != null)
+                {
+                    var a = Child(chain, "Anchor", Vector2.zero);
+                    a.position = floor + BossChains[c].ground;
+                    FitSprite(MakeSprite(a.gameObject, anchor, Color.white, 7), 1.1f, 0f);
+                }
+            }
+        }
+
+        /// <summary>Boss 下方緩緩上升的綠霧光點（粒子，不受光、半透明）。floor = 房間地面中央。</summary>
+        private static void MakeBossMist(Transform parent, Vector2 floor)
+        {
+            var glow = LoadCenteredSprite(SoftGlowPath, SpriteAlignment.Center);
+            if (glow == null) return;
+            var go = new GameObject("BossMist");
+            go.transform.SetParent(parent);
+            go.transform.position = floor + Vector2.up * 0.3f;
+            var ps = go.AddComponent<ParticleSystem>();
+
+            var main = ps.main;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(3f, 5f);
+            main.startSpeed = 0f;
+            main.startSize = new ParticleSystem.MinMaxCurve(0.6f, 1.6f);
+            main.startColor = new Color(0.35f, 1f, 0.5f, 0.35f);
+            main.maxParticles = 60;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+
+            var emission = ps.emission;
+            emission.rateOverTime = 8f;
+            var shape = ps.shape;
+            shape.shapeType = ParticleSystemShapeType.Box;
+            shape.scale = new Vector3(14f, 0.2f, 0.1f);
+
+            var velocity = ps.velocityOverLifetime;
+            velocity.enabled = true;
+            velocity.space = ParticleSystemSimulationSpace.World;
+            velocity.x = new ParticleSystem.MinMaxCurve(-0.15f, 0.15f);
+            velocity.y = new ParticleSystem.MinMaxCurve(0.3f, 0.9f);
+            velocity.z = new ParticleSystem.MinMaxCurve(0f, 0f);
+
+            var fade = new Gradient();
+            fade.SetKeys(
+                new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+                new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(1f, 0.3f), new GradientAlphaKey(0f, 1f) });
+            var color = ps.colorOverLifetime;
+            color.enabled = true;
+            color.color = fade;
+
+            var sheet = ps.textureSheetAnimation;
+            sheet.enabled = true;
+            sheet.mode = ParticleSystemAnimationMode.Sprites;
+            sheet.SetSprite(0, glow);
+
+            var renderer = go.GetComponent<ParticleSystemRenderer>();
+            renderer.sharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(SpriteUnlitMaterialPath);
+            renderer.sortingOrder = 10; // 浮岩前、玩家後
+        }
+
+        /// <summary>匯入為 Sprite（PPU 100、指定 pivot）並載入，缺圖時警告並回傳 null。</summary>
+        private static Sprite LoadCenteredSprite(string path, SpriteAlignment alignment)
+        {
+            ConfigureSprite(path, 100, alignment, 2048, compressed: true);
+            var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            if (sprite == null) Debug.LogWarning("[DrownedDream] 找不到 Boss 房裝飾圖：" + path);
+            return sprite;
+        }
+
+        /// <summary>依目標寬 / 高縮放 Sprite（其中一個為 0 時等比縮放）。</summary>
+        private static void FitSprite(SpriteRenderer sr, float width, float height)
+        {
+            var size = sr.sprite.bounds.size;
+            float sx = width > 0f ? width / size.x : height / size.y;
+            float sy = height > 0f ? height / size.y : sx;
+            if (width <= 0f) sx = sy;
+            sr.transform.localScale = new Vector3(sx, sy, 1f);
         }
 
         /// <summary>Boss 周圍光源（feet = Boss 腳底）：紅色為主（背光 + 左右兩盞），綠色為輔（浮岩下方兩盞）。</summary>
@@ -1178,15 +1324,16 @@ namespace DrownedDream.EditorTools
             root.position = feet;
             var red = new Color(1f, 0.15f, 0.12f);
             var green = new Color(0.35f, 1f, 0.5f);
-            MakePointLight(root, "RedMain", new Vector2(0f, 6f), red, 1.4f, 3f, 14f);
-            MakePointLight(root, "RedLeft", new Vector2(-8f, 3f), red, 0.9f, 1f, 7f);
-            MakePointLight(root, "RedRight", new Vector2(8f, 3f), red, 0.9f, 1f, 7f);
-            MakePointLight(root, "GreenLeft", new Vector2(-5f, -3f), green, 0.7f, 0.5f, 5f);
-            MakePointLight(root, "GreenRight", new Vector2(5f, -3f), green, 0.7f, 0.5f, 5f);
+            // 內半徑小、強度高：中心亮、往外快速變暗，拉高明暗對比
+            MakePointLight(root, "RedMain", new Vector2(0f, 8f), red, 2.6f, 1f, 11f);
+            MakePointLight(root, "RedLeft", new Vector2(-7f, 6f), red, 2f, 0.5f, 6f);
+            MakePointLight(root, "RedRight", new Vector2(7f, 6f), red, 2f, 0.5f, 6f);
+            MakePointLight(root, "GreenLeft", new Vector2(-5f, -1.5f), green, 1.5f, 0.3f, 5f);
+            MakePointLight(root, "GreenRight", new Vector2(5f, -1.5f), green, 1.5f, 0.3f, 5f);
         }
 
         /// <summary>建立一盞點光源（局部位置、顏色、強度、內外半徑）。</summary>
-        private static void MakePointLight(Transform parent, string name, Vector2 localPos, Color color, float intensity, float inner, float outer)
+        private static Light2D MakePointLight(Transform parent, string name, Vector2 localPos, Color color, float intensity, float inner, float outer)
         {
             var light = Child(parent, name, localPos).gameObject.AddComponent<Light2D>();
             light.lightType = Light2D.LightType.Point;
@@ -1194,6 +1341,7 @@ namespace DrownedDream.EditorTools
             light.intensity = intensity;
             light.pointLightInnerRadius = inner;
             light.pointLightOuterRadius = outer;
+            return light;
         }
 
         /// <summary>
@@ -1219,7 +1367,7 @@ namespace DrownedDream.EditorTools
                 return placeholder;
             }
 
-            var sr = MakeSprite(visual, frames[0], Color.white, 8);
+            var sr = MakeSprite(visual, frames[0], BossTint, 8);
             Wire(visual.AddComponent<SpriteFrameAnimator>(),
                 ("_frames", frames.Cast<Object>().ToArray()),
                 ("_durations", BossFrameDurations));
@@ -1264,6 +1412,7 @@ namespace DrownedDream.EditorTools
                 var sr = MakeSprite(Child(go.transform, "Visual", Vector2.zero).gameObject, s_square, new Color(0.75f, 0.65f, 0.4f), 3);
                 sr.transform.localScale = new Vector3(2f, 1f, 1f);
             }
+            MakePointLight(go.transform, "GreenLight", new Vector2(0f, 0.8f), new Color(0.35f, 1f, 0.5f), 1.8f, 0.3f, 2.5f); // 祭壇綠光
             var altar = go.AddComponent<SealAltar>();
             Wire(altar, ("_boss", boss));
         }

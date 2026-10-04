@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 
 namespace DrownedDream
 {
@@ -10,6 +11,12 @@ namespace DrownedDream
         [SerializeField] private SpriteRenderer _renderer;
         /// <summary>啟用中的顏色。</summary>
         [SerializeField] private Color _activeColor = new Color(0.4f, 1f, 0.8f);
+        /// <summary>頂部光源（未啟用紅光、啟用後黃光；沒有可留空）。</summary>
+        [SerializeField] private Light2D _light;
+        /// <summary>未啟用時的光色。</summary>
+        [SerializeField] private Color _inactiveLightColor = new Color(1f, 0.15f, 0.12f);
+        /// <summary>啟用後的光色。</summary>
+        [SerializeField] private Color _activeLightColor = new Color(1f, 0.85f, 0.3f);
 
         /// <summary>目前啟用的存檔點。</summary>
         private static Checkpoint s_current;
@@ -21,6 +28,14 @@ namespace DrownedDream
         {
             GetComponent<Collider2D>().isTrigger = true;
             if (_renderer != null) _inactiveColor = _renderer.color;
+            SetLit(false);
+        }
+
+        /// <summary>切換外觀顏色與光色（active = 目前的復活點）。</summary>
+        private void SetLit(bool active)
+        {
+            if (_renderer != null) _renderer.color = active ? _activeColor : _inactiveColor;
+            if (_light != null) _light.color = active ? _activeLightColor : _inactiveLightColor;
         }
 
         /// <summary>玩家碰觸：更新復活點。</summary>
@@ -30,9 +45,9 @@ namespace DrownedDream
             var respawn = other.attachedRigidbody.GetComponent<PlayerRespawn>();
             if (respawn == null) return;
 
-            if (s_current != null && s_current._renderer != null) s_current._renderer.color = s_current._inactiveColor;
+            if (s_current != null) s_current.SetLit(false);
             s_current = this;
-            if (_renderer != null) _renderer.color = _activeColor;
+            SetLit(true);
             respawn.SetRespawnPoint(transform.position);
             GameEvents.ShowMessage("記憶在此刻下印記（復活點）", 1.5f);
         }

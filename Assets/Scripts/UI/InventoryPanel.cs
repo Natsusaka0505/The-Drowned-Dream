@@ -93,17 +93,17 @@ namespace DrownedDream
         /// <summary>左側道具清單：圖示 + 名稱數量 + 說明，下方為小地圖圖例。</summary>
         private void BuildItemList(RectTransform bg)
         {
-            var list = UIFactory.Rect("Items", bg, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(-400f, 60f), new Vector2(640f, 600f));
+            var list = UIFactory.Rect("Items", bg, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(-430f, 110f), new Vector2(640f, 680f));
             _harpoonText = ItemRow(list, 0f, _harpoonIcon, "［武器］魚叉", "撿回插在牆上的魚叉可補充。");
-            _sealText = ItemRow(list, -150f, _sealIcon, "［關鍵］邪神雕像", "集齊即可在祭壇封印邪神。");
+            _sealText = ItemRow(list, -170f, _sealIcon, "［關鍵］邪神雕像", "集齊即可在祭壇封印邪神。");
 
-            var legendTitle = UIFactory.Rect("LegendTitle", list, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -320f), new Vector2(600f, 36f));
+            var legendTitle = UIFactory.Rect("LegendTitle", list, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -350f), new Vector2(600f, 36f));
             UIFactory.Text(legendTitle, "小地圖：未開啟的寶箱", 24, TextAnchor.MiddleLeft, new Color(0.8f, 0.85f, 0.9f));
-            LegendRow(list, -370f, _hpIcon, _hpChestColor, "灰寶箱 —— 海草繃帶（回 HP）");
-            LegendRow(list, -420f, _sanityIcon, _sanityChestColor, "藍灰寶箱 —— 鎮靜藥丸（回 SAN）");
-            LegendRow(list, -470f, _sealIcon, _sealChestColor, "黑寶箱 —— 邪神雕像");
-            LegendRow(list, -520f, _sealIcon, _finalSealColor, "最後的邪神雕像（閃爍）");
-            LegendRow(list, -570f, null, _bossColor, "邪神（進過 Boss 房後顯示）");
+            LegendRow(list, -405f, _hpIcon, _hpChestColor, "灰寶箱 —— 海草繃帶（回 HP）");
+            LegendRow(list, -463f, _sanityIcon, _sanityChestColor, "藍灰寶箱 —— 鎮靜藥丸（回 SAN）");
+            LegendRow(list, -521f, _sealIcon, _sealChestColor, "黑寶箱 —— 邪神雕像");
+            LegendRow(list, -579f, _sealIcon, _finalSealColor, "最後的邪神雕像（閃爍）");
+            LegendRow(list, -637f, null, _bossColor, "邪神（進過 Boss 房後顯示）");
         }
 
         /// <summary>一列道具：左邊大圖示，右邊名稱 / 數量與說明，回傳數量文字。</summary>
@@ -145,7 +145,7 @@ namespace DrownedDream
         /// <summary>右側小地圖外框。</summary>
         private void BuildMap(RectTransform bg)
         {
-            var frame = UIFactory.Rect("Map", bg, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(340f, 40f), new Vector2(MapSize + 16f, MapSize + 16f));
+            var frame = UIFactory.Rect("Map", bg, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(380f, 40f), new Vector2(MapSize + 16f, MapSize + 16f));
             UIFactory.Image(frame, new Color(0.6f, 0.75f, 0.85f, 0.5f));
             var inner = UIFactory.Stretch("Inner", frame);
             inner.offsetMin = new Vector2(8f, 8f);
@@ -153,7 +153,7 @@ namespace DrownedDream
             UIFactory.Image(inner, new Color(0.01f, 0.02f, 0.04f, 1f));
             _mapContent = inner;
 
-            var label = UIFactory.Rect("MapLabel", frame, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 0f), new Vector2(0f, 6f), new Vector2(400f, 36f));
+            var label = UIFactory.Rect("MapLabel", frame, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 0f), new Vector2(0f, 12f), new Vector2(400f, 36f));
             UIFactory.Text(label, "地圖", 26, TextAnchor.MiddleCenter, new Color(0.85f, 0.9f, 0.95f));
         }
 

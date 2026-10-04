@@ -25,6 +25,14 @@ namespace DrownedDream
         [Header("精靈提示")]
         /// <summary>精靈圖（進 Boss 房前的提示由精靈說）。</summary>
         [SerializeField] private Sprite _elfSprite;
+        /// <summary>精靈對話框顯示時的不透明度（0~1）。</summary>
+        [SerializeField, Range(0f, 1f)] private float _elfAlpha = 0.6f;
+        /// <summary>一般提示訊息的不透明度（0~1）。</summary>
+        [SerializeField, Range(0f, 1f)] private float _messageAlpha = 0.6f;
+
+        [Header("封印進度（右上角）")]
+        /// <summary>是否顯示右上角封印道具數量（2026-10-04 預設關閉，背包仍看得到）。</summary>
+        [SerializeField] private bool _showSealCount;
 
         [Header("HP / SAN 框與填充條")]
         /// <summary>HP 框圖。</summary>
@@ -93,11 +101,12 @@ namespace DrownedDream
 
             var sealRt = UIFactory.Rect("Seals", root, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-30f, -100f), new Vector2(600f, 40f)); // 魚叉圖示列下方
             _sealText = UIFactory.Text(sealRt, "", 24, TextAnchor.UpperRight, new Color(1f, 0.9f, 0.6f));
+            sealRt.gameObject.SetActive(_showSealCount);
 
             var msgRt = UIFactory.Rect("Message", root, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 90f), new Vector2(1400f, 60f));
             _messageText = UIFactory.Text(msgRt, "", 30, TextAnchor.MiddleCenter, new Color(1f, 0.95f, 0.8f));
 
-            _elf = new ElfDialog(root, _elfSprite);
+            _elf = new ElfDialog(root, _elfSprite, _elfAlpha);
             _finalSealArrow = new TargetArrow(root, new Color(1f, 0.35f, 0.75f));
 
             var helpRt = UIFactory.Rect("Help", root, new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(30f, 20f), new Vector2(1400f, 30f));
@@ -214,7 +223,7 @@ namespace DrownedDream
             {
                 _messageTimer -= Time.unscaledDeltaTime;
                 var c = _messageText.color;
-                c.a = Mathf.Clamp01(_messageTimer / 0.4f);
+                c.a = Mathf.Clamp01(_messageTimer / 0.4f) * _messageAlpha;
                 _messageText.color = c;
             }
         }
@@ -230,7 +239,7 @@ namespace DrownedDream
             _messageText.text = text;
             _messageTimer = duration;
             var c = _messageText.color;
-            c.a = 1f;
+            c.a = _messageAlpha;
             _messageText.color = c;
         }
     }
