@@ -185,7 +185,59 @@ namespace DrownedDream.EditorTools
                     AddPlatform(c * RoomCells / 2f + 12f, r * RoomUnits + 4.5f); // 高浮台（9~15 單位，頂面 4.5）
                 }
             }
+
+            BuildUpperRoutes(w);
             return w;
+        }
+
+        /// <summary>上層路線最上層浮台的頂面高度（單位，區塊內局部）。</summary>
+        public const float UpperTop = 12.5f;
+
+        /// <summary>
+        /// 上層路線（2026-10-04）：房間上半部加浮台一路疊到頂面 12.5，上層放獎勵；
+        /// 一般區塊接在高浮台（頂面 4.5）之後，最上層貼牆，並在 (1,r)–(2,r) 之間的牆上方開門，形成上層通道；
+        /// 有地洞的區塊避開中間的洞，從地面之字往上。單向浮台可從下方跳穿，每層高差 2（跳躍約 2.58）。
+        /// </summary>
+        private static void BuildUpperRoutes(bool[,] w)
+        {
+            foreach (int r in UpperDoorRows)
+            {
+                // 一般區塊 (1,r)：最上層靠右牆；(2,r)：最上層靠左牆
+                AddUpperStack(1, r, new[] { 4.5f, 11.5f, 4.5f }, 6.5f, 12.5f);
+                AddUpperStack(2, r, new[] { 4.5f, 11.5f, 4.5f }, 6.5f, 3.5f);
+                // 兩區塊之間的牆在頂面 12.5 ~ 15.5 開門（牆頂本身就是 1 單位寬的走道）
+                int x = 2 * RoomCells;
+                for (int y = 25; y <= 30; y++)
+                {
+                    w[x - 1, r * RoomCells + y] = false;
+                    w[x, r * RoomCells + y] = false;
+                }
+            }
+            // 有地洞的區塊：從地面之字往上（左右 4.5 / 11.5，中間是洞）
+            foreach (var room in HoleRoomRoutes)
+            {
+                bool startLeft = room == new Vector2Int(0, 1); // (0,1) 右側地面有復活點，第一層改放左邊
+                var xs = startLeft ? new[] { 4.5f, 11.5f, 4.5f, 11.5f, 4.5f } : new[] { 11.5f, 4.5f, 11.5f, 4.5f, 11.5f };
+                AddUpperStack(room.x, room.y, xs, 2.5f, -1f);
+            }
+        }
+
+        /// <summary>有上層通道（(1,r)–(2,r) 牆上開門）的列。</summary>
+        public static readonly int[] UpperDoorRows = { 0, 3 };
+
+        /// <summary>有地洞、也加上層路線的區塊（直井上方的 (3,3) 與 Boss 房入口 (0,1)、起點 (0,3)）。</summary>
+        public static readonly Vector2Int[] HoleRoomRoutes = { new Vector2Int(0, 3), new Vector2Int(3, 3), new Vector2Int(0, 1) };
+
+        /// <summary>
+        /// 在區塊 (col,row) 依序放浮台：xs = 各層中心（局部 x），第一層頂面 firstTop，每層 +2；
+        /// topX ≥ 0 時再加一層頂面 12.5、長 6 的最上層浮台（貼牆用）。
+        /// </summary>
+        private static void AddUpperStack(int col, int row, float[] xs, float firstTop, float topX)
+        {
+            float ox = col * RoomUnits;
+            float oy = row * RoomUnits;
+            for (int i = 0; i < xs.Length; i++) AddPlatform(ox + xs[i], oy + firstTop + i * StepHeight, 4f, 6f);
+            if (topX >= 0f) AddPlatform(ox + topX, oy + UpperTop, 6f, 6f);
         }
 
         /// <summary>

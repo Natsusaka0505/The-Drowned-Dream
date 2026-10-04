@@ -110,6 +110,26 @@ namespace DrownedDream
         /// <summary>落雷特效存在秒數。</summary>
         [SerializeField] private float _lightningFxTime = 0.5f;
 
+        [Header("浮岩地刺（玩家站上 Boss 下方浮岩時）")]
+        /// <summary>浮岩站立面中央（世界座標，由建場景工具設定）。</summary>
+        [SerializeField] private Vector2 _rockTop;
+        /// <summary>浮岩站立面半寬（0 = 沒有浮岩，不使用地刺）。</summary>
+        [SerializeField] private float _rockHalfWidth;
+        /// <summary>站上浮岩後每隔幾秒冒一次地刺（強化時同樣縮短）。</summary>
+        [SerializeField] private float _rockSpikeInterval = 2.2f;
+        /// <summary>剛站上浮岩到第一次地刺的秒數。</summary>
+        [SerializeField] private float _rockSpikeFirstDelay = 0.6f;
+        /// <summary>每組地刺範圍寬度。</summary>
+        [SerializeField] private float _rockSpikeWidth = 3f;
+        /// <summary>骨刺最高高度。</summary>
+        [SerializeField] private float _rockSpikeHeight = 1.9f;
+        /// <summary>地刺預告秒數。</summary>
+        [SerializeField] private float _rockSpikeWarn = 0.8f;
+        /// <summary>地刺判定秒數。</summary>
+        [SerializeField] private float _rockSpikeActive = 0.45f;
+        /// <summary>地刺裂縫 / 閃光顏色。</summary>
+        [SerializeField] private Color _rockSpikeColor = new Color(1f, 0.25f, 0.15f);
+
         [Header("集齊封印道具後強化")]
         /// <summary>玩家集齊封印道具後，攻擊間隔（房內與全圖）乘上此倍率。</summary>
         [SerializeField] private float _empoweredIntervalMultiplier = 0.5f;
@@ -162,6 +182,8 @@ namespace DrownedDream
         private int _hitCount;
         /// <summary>原始顏色。</summary>
         private Color _baseColor;
+        /// <summary>距離下一次浮岩地刺的秒數。</summary>
+        private float _rockSpikeTimer;
         /// <summary>是否已顯示過強化提示。</summary>
         private bool _empoweredAnnounced;
 
@@ -263,6 +285,7 @@ namespace DrownedDream
                 UpdateGlobalAttack(player);
                 return;
             }
+            UpdateRockSpikes(player);
             if (_attacking) return;
 
             _attackTimer -= Time.deltaTime;
@@ -271,6 +294,41 @@ namespace DrownedDream
             var attack = _attackOrder[_attackIndex % _attackOrder.Length];
             _attackIndex++;
             StartCoroutine(AttackRoutine(attack, player));
+        }
+
+        /// <summary>玩家是否站在浮岩上（站立面範圍內、離頂面不遠）。</summary>
+        private bool IsOnRock(Player player)
+        {
+            if (_rockHalfWidth <= 0f) return false;
+            Vector2 p = player.transform.position;
+            return Mathf.Abs(p.x - _rockTop.x) <= _rockHalfWidth && p.y >= _rockTop.y - 0.2f && p.y <= _rockTop.y + 2.5f;
+        }
+
+        /// <summary>
+        /// 浮岩地刺：玩家站在浮岩上時定時在腳下冒地刺（與一般出招輪替各自獨立）；
+        /// 強化時間隔縮短，並在浮岩上另一個隨機位置多冒一組。
+        /// </summary>
+        private void UpdateRockSpikes(Player player)
+        {
+            if (!IsOnRock(player))
+            {
+                _rockSpikeTimer = _rockSpikeFirstDelay; // 剛站上去給一點反應時間
+                return;
+            }
+            _rockSpikeTimer -= Time.deltaTime;
+            if (_rockSpikeTimer > 0f) return;
+            _rockSpikeTimer = _rockSpikeInterval * IntervalScale;
+
+            float half = Mathf.Max(0f, _rockHalfWidth - _rockSpikeWidth / 2f);
+            float x = Mathf.Clamp(player.transform.position.x, _rockTop.x - half, _rockTop.x + half);
+            SpawnRockSpike(x);
+            for (int i = 0; i < ExtraCount; i++) SpawnRockSpike(_rockTop.x + Random.Range(-half, half));
+        }
+
+        /// <summary>在浮岩頂面 x 位置冒一組地刺。</summary>
+        private void SpawnRockSpike(float x)
+        {
+            SpikeEruption.Spawn(new Vector2(x, _rockTop.y), _rockSpikeWidth, _rockSpikeHeight, _rockSpikeWarn, _rockSpikeActive, _damage, _rockSpikeColor);
         }
 
         /// <summary>全圖攻擊：喚醒後玩家不在 Boss 房時，定時在玩家附近交替落雷 / 追蹤彈（只扣 HP）。</summary>

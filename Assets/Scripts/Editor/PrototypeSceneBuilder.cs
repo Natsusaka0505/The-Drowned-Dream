@@ -27,8 +27,10 @@ namespace DrownedDream.EditorTools
         public const string ArtDir = "Assets/Art/Placeholder";
         /// <summary>Prefab 目錄。</summary>
         private const string PrefabDir = "Assets/Prefabs";
-        /// <summary>遠景背景圖路徑。</summary>
-        public const string FarBackgroundPath = "Assets/Art/Background/background_far.png";
+        /// <summary>遠景背景圖路徑（2026-10-04 改用遠景窗口：原圖縮小置中、四周深海漸層，畫面上岩石變小、空間更大）。</summary>
+        public const string FarBackgroundPath = "Assets/Art/Background/background_vista.png";
+        /// <summary>舊版處理過的遠景（MapConfig 仍指向它時自動換成遠景窗口）。</summary>
+        public const string OldFarBackgroundPath = "Assets/Art/Background/background_far.png";
         /// <summary>遠景背景原圖（美術交付；background_far.png 由它模糊 + 降對比 + 暗部拉向深藍產生，避免岩石剪影被誤認成牆）。</summary>
         public const string FarBackgroundSourcePath = "Assets/Art/Background/background.png";
         /// <summary>地圖設定資產路徑。</summary>
@@ -271,9 +273,10 @@ namespace DrownedDream.EditorTools
             }
             MapBuilder.EnsureTerrainSet(d.Map); // 舊的 MapConfig 沒有地形素材時補上預設切片
             var farSource = AssetDatabase.LoadAssetAtPath<Texture2D>(FarBackgroundSourcePath);
-            if (d.Map.FarBackground == null || d.Map.FarBackground == farSource)
+            var oldFar = AssetDatabase.LoadAssetAtPath<Texture2D>(OldFarBackgroundPath);
+            if (d.Map.FarBackground == null || d.Map.FarBackground == farSource || d.Map.FarBackground == oldFar)
             {
-                // 還沒設定，或仍指向原圖 → 改用處理過的遠景（企劃改成別張圖時不動）
+                // 還沒設定，或仍指向原圖 / 舊版處理圖 → 改用遠景窗口（企劃改成別張圖時不動）
                 // 舊的 MapConfig 沒有遠景欄位時補上（不覆蓋企劃已設定的值）
                 var far = AssetDatabase.LoadAssetAtPath<Texture2D>(FarBackgroundPath);
                 if (far != null)
@@ -481,6 +484,12 @@ namespace DrownedDream.EditorTools
             var gameCamera = camGo.AddComponent<GameCamera>();
             Wire(gameCamera, ("_target", player));
 
+            // 水下氛圍：海雪 + 光柱（跟著攝影機，不受光）
+            var ambience = new GameObject("UnderwaterAmbience").AddComponent<UnderwaterAmbience>();
+            Wire(ambience,
+                ("_material", AssetDatabase.LoadAssetAtPath<Material>(SpriteUnlitMaterialPath)),
+                ("_dotSprite", LoadCenteredSprite(SoftGlowPath, SpriteAlignment.Center)));
+
             var canvasGo = new GameObject("Canvas");
             var canvas = canvasGo.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
@@ -632,6 +641,17 @@ namespace DrownedDream.EditorTools
             MakeCheckpoint(root, PrototypeMapLayout.Local(0, 1, 12f, floorItemY));
             MakeChest(root, d.ChestGray, PrototypeMapLayout.Local(0, 1, 3f, floorItemY));
 
+            // 上層路線（2026-10-04，見 PrototypeMapLayout.BuildUpperRoutes）：最上層頂面 12.5（地洞區塊 10.5），放回復寶箱與深淵之眼
+            const float upperItemY = PrototypeMapLayout.UpperTop + 0.6f;
+            const float holeTopItemY = 10.5f + 0.6f;
+            MakeChest(root, d.ChestGray, PrototypeMapLayout.Local(1, 3, 13.5f, upperItemY));
+            MakeEnemy(root, d.Eye, PrototypeMapLayout.Local(2, 3, 4.5f, 10.5f));
+            MakeChest(root, d.ChestBlueGray, PrototypeMapLayout.Local(1, 0, 13.5f, upperItemY));
+            MakeEnemy(root, d.Eye, PrototypeMapLayout.Local(2, 0, 3.5f, PrototypeMapLayout.UpperTop));
+            MakeChest(root, d.ChestGray, PrototypeMapLayout.Local(0, 3, 11.5f, holeTopItemY));
+            MakeEnemy(root, d.Eye, PrototypeMapLayout.Local(3, 3, 11.5f, 10.5f));
+            MakeChest(root, d.ChestBlueGray, PrototypeMapLayout.Local(0, 1, 4.5f, holeTopItemY));
+
             // 中央 Boss 房（2×2 打通）：Boss 站在正中央地面，祭壇在入口側
             float arenaFloor = PrototypeMapLayout.ArenaFloorY;
             float arenaX = PrototypeMapLayout.ArenaCenterX;
@@ -647,6 +667,7 @@ namespace DrownedDream.EditorTools
                 PrototypeMapLayout.Local(2, 3, 9f, floorItemY),
                 PrototypeMapLayout.Local(2, 0, 2f, floorItemY),
                 PrototypeMapLayout.Local(1, 0, 10f, floorItemY),
+                PrototypeMapLayout.Local(2, 3, 3f, PrototypeMapLayout.UpperTop + 0.6f), // 上層通道
             });
             MakeBossArea(root, boss, new Vector2(arenaX, arenaFloor + 8f));
         }
@@ -1181,6 +1202,7 @@ namespace DrownedDream.EditorTools
                 ("_projectileFrames", LoadProjectileFrames()));
             Wire(go.GetComponent<FearSource>(), ("_radius", 18f), ("_drainPerSecond", 4f)); // Boss 變大，恐懼範圍跟著放大
             MakeBossRock(parent, bossFeet + Vector2.up * BossRockCover);
+            Wire(boss, ("_rockTop", bossFeet + Vector2.up * BossRockCover), ("_rockHalfWidth", (BossRockSize.x - 1f) / 2f)); // 浮岩地刺範圍
             MakeBossChains(parent, feet, bossFeet + Vector2.up * BossRockCover);
             MakeBossMist(parent, feet);
             MakeBossLights(parent, bossFeet);

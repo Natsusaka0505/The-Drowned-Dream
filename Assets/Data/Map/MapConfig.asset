@@ -15,7 +15,7 @@ MonoBehaviour:
   _mapTexture: {fileID: 2800000, guid: 3358dbd297988440e88cb34eba02d638, type: 3}
   _collisionMask: {fileID: 2800000, guid: 59c14458095dd4c789ef5193466f8664, type: 3}
   _terrain: {fileID: 11400000, guid: 3a5ada129b47049158e1dca499bb4b8b, type: 2}
-  _farBackground: {fileID: 2800000, guid: fbc29d09bdb904f2eb614ae51384ad89, type: 3}
+  _farBackground: {fileID: 2800000, guid: 279425bd13e7246ca859000f70379755, type: 3}
   _farBackgroundTint: {r: 0.85, g: 0.9, b: 1, a: 1}
   _parallaxFollow: 0.9
   _columns: 4

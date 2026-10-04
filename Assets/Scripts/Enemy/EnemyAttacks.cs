@@ -83,6 +83,59 @@ namespace DrownedDream
             }
         }
 
+        /// <summary>骨刺快取。</summary>
+        private static Sprite s_boneSpike;
+
+        /// <summary>
+        /// 骨刺：1×1 單位（128px、pivot 底部中央），由根部往尖端收窄並微微彎曲；
+        /// 根部暗紫黑 → 中段骨白 → 尖端亮白，左側受光、右側陰影，邊緣深色描邊與一道高光脊線。
+        /// </summary>
+        public static Sprite BoneSpike
+        {
+            get
+            {
+                if (s_boneSpike != null) return s_boneSpike;
+                const int size = 128;
+                var tex = new Texture2D(size, size) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+                var root = new Color(0.16f, 0.1f, 0.14f);
+                var bone = new Color(0.78f, 0.72f, 0.64f);
+                var tip = new Color(0.97f, 0.94f, 0.88f);
+                var outline = new Color(0.08f, 0.05f, 0.07f);
+                for (int y = 0; y < size; y++)
+                {
+                    float v = (y + 0.5f) / size;                       // 0 根部 → 1 尖端
+                    float hw = 0.48f * Mathf.Pow(1f - v, 0.85f);        // 半寬
+                    float cx = 0.5f + 0.07f * v * v;                    // 尖端微微往右彎
+                    var body = v < 0.45f ? Color.Lerp(root, bone, v / 0.45f) : Color.Lerp(bone, tip, (v - 0.45f) / 0.55f);
+                    for (int x = 0; x < size; x++)
+                    {
+                        float px = (x + 0.5f) / size;
+                        if (hw <= 0.001f)
+                        {
+                            tex.SetPixel(x, y, Color.clear);
+                            continue;
+                        }
+                        float u = (px - cx) / hw;                       // -1 左緣 ~ 1 右緣
+                        float edge = (1f - Mathf.Abs(u)) * hw * size;   // 到邊緣的像素距離
+                        if (edge <= 0f)
+                        {
+                            tex.SetPixel(x, y, Color.clear);
+                            continue;
+                        }
+                        float light = u < 0f ? 1f + 0.18f * -u : 1f - 0.4f * u; // 左亮右暗
+                        var c = body * light;
+                        if (Mathf.Abs(u + 0.35f) < 0.08f && v > 0.2f) c = Color.Lerp(c, tip, 0.6f); // 高光脊線
+                        if (edge < 2.2f) c = Color.Lerp(outline, c, edge / 2.2f);                    // 描邊
+                        c.a = Mathf.Clamp01(edge);                                                   // 邊緣抗鋸齒
+                        tex.SetPixel(x, y, c);
+                    }
+                }
+                tex.Apply();
+                s_boneSpike = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0f), size);
+                return s_boneSpike;
+            }
+        }
+
         /// <summary>柔光圓快取。</summary>
         private static Sprite s_glow;
 
