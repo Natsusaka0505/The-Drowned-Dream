@@ -31,8 +31,8 @@
 | 精靈 | — | 2026-10-04 已交付 `elf.png` → `Assets/Art/UI/Elf/elf.png`，用於提示對話框與背包 |
 | 落雷 / 光束特效 | 2026-10-04：使用素材包 FX Lightning II free（`Assets/FX_Kandol_Pack/FX_lightning_II`）：落雷 `Prefabs/fx_lightning_02.prefab`、深淵之眼光束 `Prefabs/fx_lightning_01.prefab`。素材包材質為 built-in 管線，在 URP 下若顯示粉紅色需換 Shader |
 | 寶箱（灰 / 藍灰 / 黑，各有關 / 開） | 約 195×176 | 2026-10-03 由 `ArtSource/map_objects.png` 切出並去背：`Assets/Art/Chests/chest_{gray,bluegray,black}_{closed,open}.png`，同色關 / 開同尺寸、底部對齊 |
-| 存檔點 | 約 16×38 | 未啟用 / 啟用 |
-| 封印祭壇 | 約 64×32 | |
+| 存檔點 | 約 16×38 | 2026-10-04 美術已交圖（燭台 + 眼睛），放 `Assets/Art/Props/checkpoint.png`（裁掉透明邊），遊戲內高 2.2 單位；未啟用偏暗、啟用恢復原色 |
+| 封印祭壇 | 約 64×32 | 2026-10-04 美術已交圖（翅膀眼球 + 牙口石台），放 `Assets/Art/Props/altar.png`（裁掉透明邊），遊戲內寬 3 單位 |
 | 憋氣屏障 | 16×480（可平鋪） | 開啟時半透明由程式處理 |
 | 幻覺物件 | 自由 | 低 SAN 時才出現 |
 

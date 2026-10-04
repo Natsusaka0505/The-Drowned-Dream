@@ -69,6 +69,12 @@ namespace DrownedDream.EditorTools
             0.1f, 0.06f, 0.1f, 0.06f, 0.1f, 0.06f, 0.1f, 0.06f, 0.1f, 0.06f, 0.1f, 0.06f, 0.1f, 0.06f, 0.1f, 0.06f,
             0.1f, 0.06f, 0.1f, 0.06f, 0.1f, 0.06f, 0.1f, 0.06f, 0.1f, 0.06f, 0.1f, 0.06f, 0.1f, 0.06f, 0.1f, 0.06f, 0.03f,
         };
+        /// <summary>Boss 腳下浮岩圖（依 float / terrain 色票產生）。</summary>
+        public const string BossRockPath = "Assets/Art/Boss/boss_rock.png";
+        /// <summary>封印祭壇圖（美術交付，裁掉透明邊；沒有就用佔位方塊）。</summary>
+        public const string AltarSpritePath = "Assets/Art/Props/altar.png";
+        /// <summary>復活點圖（美術交付，裁掉透明邊；沒有就用佔位方塊）。</summary>
+        public const string CheckpointSpritePath = "Assets/Art/Props/checkpoint.png";
         /// <summary>怪物畫格資料夾（眼球 / 海蝶 / 觸鬚）。</summary>
         public const string EnemyArtDir = "Assets/Art/Enemies";
         /// <summary>角色畫格資料夾。</summary>
@@ -79,6 +85,8 @@ namespace DrownedDream.EditorTools
         private static readonly Vector2 PlayerPivotRight = new Vector2(0.277f, 0.015f);
         /// <summary>面向左的 pivot。</summary>
         private static readonly Vector2 PlayerPivotLeft = new Vector2(0.660f, 0.015f);
+        /// <summary>角色圖相對碰撞框中心的高度（碰撞框半高 0.7 + 邊緣 0.05，再往下壓一點讓腳踩進地面）。</summary>
+        private const float PlayerSpriteOffsetY = -0.85f;
         /// <summary>魚叉圖（美術 Speargun.png 轉成水平、槍頭朝右）。</summary>
         public const string HarpoonSpritePath = "Assets/Art/Weapon/harpoon.png";
         /// <summary>魚槍圖示（背包的魚叉欄位）。</summary>
@@ -818,7 +826,7 @@ namespace DrownedDream.EditorTools
             SpriteRenderer artSr = null;
             if (art != null)
             {
-                artSr = MakeSprite(Child(go.transform, "Sprite", new Vector2(0f, -0.7f)).gameObject, (Sprite)art[0][0], Color.white, 15);
+                artSr = MakeSprite(Child(go.transform, "Sprite", new Vector2(0f, PlayerSpriteOffsetY)).gameObject, (Sprite)art[0][0], Color.white, 15);
                 renderers = new Object[] { artSr };
             }
             else
@@ -910,12 +918,19 @@ namespace DrownedDream.EditorTools
             var go = new GameObject("Checkpoint");
             go.transform.SetParent(parent);
             go.transform.position = pos;
-            var sr = MakeSprite(Child(go.transform, "Visual", Vector2.zero).gameObject, s_square, new Color(0.5f, 0.55f, 0.6f), 3);
-            sr.transform.localScale = new Vector3(0.5f, 1.2f, 1f);
+            // pos 比地面高 0.6；有美術圖時底部貼地、高 2.2 單位，未啟用時偏暗，啟用後恢復原色
             var col = go.AddComponent<BoxCollider2D>();
             col.size = new Vector2(1.2f, 1.6f);
-            var cp = go.AddComponent<Checkpoint>();
-            Wire(cp, ("_renderer", sr));
+            if (MakePropSprite(go.transform, CheckpointSpritePath, new Vector2(0f, -0.6f), 0f, 2.2f, new Color(0.55f, 0.55f, 0.6f), 3))
+            {
+                Wire(go.AddComponent<Checkpoint>(), ("_renderer", go.GetComponentInChildren<SpriteRenderer>()), ("_activeColor", Color.white));
+            }
+            else
+            {
+                var sr = MakeSprite(Child(go.transform, "Visual", Vector2.zero).gameObject, s_square, new Color(0.5f, 0.55f, 0.6f), 3);
+                sr.transform.localScale = new Vector3(0.5f, 1.2f, 1f);
+                Wire(go.AddComponent<Checkpoint>(), ("_renderer", sr));
+            }
             return go;
         }
 
@@ -1109,13 +1124,21 @@ namespace DrownedDream.EditorTools
         /// <summary>Boss 整體縮放（外觀 + 判定一起放大；2026-10-04 調成 2）。</summary>
         private const float BossScale = 2f;
 
-        /// <summary>建立 Boss（feet = 地面位置；碰撞框 4×6 × BossScale，底部貼地）。</summary>
+        /// <summary>Boss 腳底離地面的高度（站在浮岩上）。</summary>
+        private const float BossHoverHeight = 4f;
+        /// <summary>浮岩大小（寬 × 高，單位）。</summary>
+        private static readonly Vector2 BossRockSize = new Vector2(17f, 3.4f);
+        /// <summary>Boss 手掌壓進浮岩頂面的深度。</summary>
+        private const float BossRockOverlap = 0.35f;
+
+        /// <summary>建立 Boss（feet = 房間地面位置）：Boss 站在浮岩上，周圍打紅綠光；碰撞框 4×6 × BossScale。</summary>
         private static BossController MakeBoss(Transform parent, Vector2 feet)
         {
             var go = new GameObject("Boss") { layer = s_enemyLayer };
             go.transform.SetParent(parent);
             go.transform.localScale = new Vector3(BossScale, BossScale, 1f);
-            go.transform.position = feet + Vector2.up * (3f * BossScale);
+            var bossFeet = feet + Vector2.up * BossHoverHeight;
+            go.transform.position = bossFeet + Vector2.up * (3f * BossScale);
             var col = go.AddComponent<BoxCollider2D>();
             col.size = new Vector2(4f, 6f);
             col.isTrigger = true;
@@ -1123,9 +1146,54 @@ namespace DrownedDream.EditorTools
             var boss = go.AddComponent<BossController>();
             var lightningFx = AssetDatabase.LoadAssetAtPath<GameObject>(LightningFxPath);
             if (lightningFx == null) Debug.LogWarning("[DrownedDream] 找不到落雷特效：" + LightningFxPath);
-            Wire(boss, ("_renderer", sr), ("_projectileBlockMask", Mask(s_groundLayer)), ("_lightningFx", lightningFx));
+            Wire(boss, ("_renderer", sr), ("_projectileBlockMask", Mask(s_groundLayer)), ("_lightningFx", lightningFx), ("_hoverHeight", BossHoverHeight));
             Wire(go.GetComponent<FearSource>(), ("_radius", 18f), ("_drainPerSecond", 4f)); // Boss 變大，恐懼範圍跟著放大
+            MakeBossRock(parent, bossFeet + Vector2.up * BossRockOverlap);
+            MakeBossLights(parent, bossFeet);
             return boss;
+        }
+
+        /// <summary>Boss 腳下的浮岩（純外觀、無碰撞；top = 岩石頂面中央）。</summary>
+        private static void MakeBossRock(Transform parent, Vector2 top)
+        {
+            var go = new GameObject("BossRock");
+            go.transform.SetParent(parent);
+            go.transform.position = top;
+            ConfigureSprite(BossRockPath, 100, SpriteAlignment.TopCenter, 2048, compressed: true);
+            var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(BossRockPath);
+            if (sprite == null)
+            {
+                Debug.LogWarning("[DrownedDream] 找不到浮岩圖：" + BossRockPath);
+                return;
+            }
+            MakeSprite(go, sprite, Color.white, 7); // 在 Boss（8）後面
+            go.transform.localScale = new Vector3(BossRockSize.x / sprite.bounds.size.x, BossRockSize.y / sprite.bounds.size.y, 1f);
+        }
+
+        /// <summary>Boss 周圍光源（feet = Boss 腳底）：紅色為主（背光 + 左右兩盞），綠色為輔（浮岩下方兩盞）。</summary>
+        private static void MakeBossLights(Transform parent, Vector2 feet)
+        {
+            var root = new GameObject("BossLights").transform;
+            root.SetParent(parent);
+            root.position = feet;
+            var red = new Color(1f, 0.15f, 0.12f);
+            var green = new Color(0.35f, 1f, 0.5f);
+            MakePointLight(root, "RedMain", new Vector2(0f, 6f), red, 1.4f, 3f, 14f);
+            MakePointLight(root, "RedLeft", new Vector2(-8f, 3f), red, 0.9f, 1f, 7f);
+            MakePointLight(root, "RedRight", new Vector2(8f, 3f), red, 0.9f, 1f, 7f);
+            MakePointLight(root, "GreenLeft", new Vector2(-5f, -3f), green, 0.7f, 0.5f, 5f);
+            MakePointLight(root, "GreenRight", new Vector2(5f, -3f), green, 0.7f, 0.5f, 5f);
+        }
+
+        /// <summary>建立一盞點光源（局部位置、顏色、強度、內外半徑）。</summary>
+        private static void MakePointLight(Transform parent, string name, Vector2 localPos, Color color, float intensity, float inner, float outer)
+        {
+            var light = Child(parent, name, localPos).gameObject.AddComponent<Light2D>();
+            light.lightType = Light2D.LightType.Point;
+            light.color = color;
+            light.intensity = intensity;
+            light.pointLightInnerRadius = inner;
+            light.pointLightOuterRadius = outer;
         }
 
         /// <summary>
@@ -1190,10 +1258,33 @@ namespace DrownedDream.EditorTools
             var go = new GameObject("SealAltar");
             go.transform.SetParent(parent);
             go.transform.position = pos;
-            var sr = MakeSprite(Child(go.transform, "Visual", Vector2.zero).gameObject, s_square, new Color(0.75f, 0.65f, 0.4f), 3);
-            sr.transform.localScale = new Vector3(2f, 1f, 1f);
+            // pos 為祭壇中心（底部 = pos.y - 0.5）；有美術圖時底部貼地、寬 3 單位
+            if (!MakePropSprite(go.transform, AltarSpritePath, new Vector2(0f, -0.5f), 3f, 0f, Color.white, 3))
+            {
+                var sr = MakeSprite(Child(go.transform, "Visual", Vector2.zero).gameObject, s_square, new Color(0.75f, 0.65f, 0.4f), 3);
+                sr.transform.localScale = new Vector3(2f, 1f, 1f);
+            }
             var altar = go.AddComponent<SealAltar>();
             Wire(altar, ("_boss", boss));
+        }
+
+        /// <summary>
+        /// 放一張底部置中的道具圖（Visual 子物件，localPos = 底部位置）；width / height 擇一大於 0 決定縮放。
+        /// 圖不存在回傳 false（由呼叫端改用佔位圖）。
+        /// </summary>
+        private static bool MakePropSprite(Transform parent, string path, Vector2 localPos, float width, float height, Color color, int order)
+        {
+            ConfigureSprite(path, 100, SpriteAlignment.BottomCenter, 1024, compressed: true);
+            var sprite = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+            if (sprite == null)
+            {
+                Debug.LogWarning("[DrownedDream] 找不到道具圖，改用佔位方塊：" + path);
+                return false;
+            }
+            var sr = MakeSprite(Child(parent, "Visual", localPos).gameObject, sprite, color, order);
+            float scale = width > 0f ? width / sprite.bounds.size.x : height / sprite.bounds.size.y;
+            sr.transform.localScale = new Vector3(scale, scale, 1f);
+            return true;
         }
 
         /// <summary>建立 Boss 房 area（放在 Boss 房內任一點即可）。</summary>

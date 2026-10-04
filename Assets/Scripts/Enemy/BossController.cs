@@ -121,6 +121,8 @@ namespace DrownedDream
         [SerializeField] private bool _canBeDamaged;
         /// <summary>被攻擊幾次死亡（可受傷時才有意義）。</summary>
         [SerializeField] private int _maxHits = 30;
+        /// <summary>Boss 腳底離房間地面的高度（站在浮岩上時 &gt; 0；掃地 / 落雷仍以房間地面為準）。</summary>
+        [SerializeField] private float _hoverHeight;
 
         /// <summary>所在的 Boss 房（掃地 / 落雷範圍、咆哮判定）。</summary>
         private Room _room;
@@ -145,6 +147,10 @@ namespace DrownedDream
         /// <summary>原始顏色。</summary>
         private Color _baseColor;
 
+        /// <summary>場上的 Boss（小地圖標示用）。</summary>
+        public static BossController Instance { get; private set; }
+        /// <summary>Boss 判定範圍（世界座標）。</summary>
+        public Bounds Bounds => _collider != null ? _collider.bounds : new Bounds(transform.position, Vector3.one);
         /// <summary>是否啟動中（攻擊玩家）。</summary>
         public bool IsActive { get; private set; }
         /// <summary>是否已被封印。</summary>
@@ -157,6 +163,13 @@ namespace DrownedDream
         {
             if (_renderer != null) _baseColor = _renderer.color;
             _collider = GetComponent<Collider2D>();
+            Instance = this;
+        }
+
+        /// <summary>清除場上 Boss 參照。</summary>
+        private void OnDestroy()
+        {
+            if (Instance == this) Instance = null;
         }
 
         /// <summary>找出所在 Boss 房（Room 在 OnEnable 註冊，因此放在 Start）。</summary>
@@ -382,8 +395,8 @@ namespace DrownedDream
             yield return new WaitForSeconds(_roarShakeTime);
         }
 
-        /// <summary>Boss 腳底高度（= 房間地面）。</summary>
-        private float FloorY => _collider != null ? _collider.bounds.min.y : transform.position.y;
+        /// <summary>房間地面高度（Boss 腳底往下扣掉浮空高度）。</summary>
+        private float FloorY => (_collider != null ? _collider.bounds.min.y : transform.position.y) - _hoverHeight;
 
         /// <summary>取得 Boss 房邊界。</summary>
         private bool TryGetRoomBounds(out Bounds bounds)

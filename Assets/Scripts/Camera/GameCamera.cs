@@ -21,7 +21,7 @@ namespace DrownedDream
         /// <summary>跟隨玩家時的畫面大小（orthographicSize）。</summary>
         [SerializeField] private float _followSize = 7f;
         /// <summary>Boss 特寫時的畫面大小。</summary>
-        [SerializeField] private float _closeUpSize = 8f; // Boss 放大 2 倍後要拉遠才拍得完整
+        [SerializeField] private float _closeUpSize = 10f; // Boss 放大 2 倍 + 站上浮岩，要拉遠才拍得完整
         /// <summary>平滑跟隨時間。</summary>
         [SerializeField] private float _smoothTime = 0.15f;
         /// <summary>切換目標（玩家 ↔ Boss）時的平移平滑時間（越大越慢）。</summary>

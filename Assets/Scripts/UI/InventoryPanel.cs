@@ -35,6 +35,10 @@ namespace DrownedDream
         [SerializeField] private Color _sealChestColor = new Color(0.7f, 0.3f, 0.95f, 1f);
         /// <summary>最後的封印道具。</summary>
         [SerializeField] private Color _finalSealColor = new Color(1f, 0.35f, 0.75f, 1f);
+        /// <summary>Boss（進過 Boss 房後顯示）。</summary>
+        [SerializeField] private Color _bossColor = new Color(0.9f, 0.12f, 0.12f, 1f);
+        /// <summary>已封印的 Boss。</summary>
+        [SerializeField] private Color _sealedBossColor = new Color(0.45f, 0.45f, 0.5f, 1f);
 
         [Header("精靈台詞（打開背包時隨機一句）")]
         /// <summary>一般台詞。</summary>
@@ -99,6 +103,7 @@ namespace DrownedDream
             LegendRow(list, -420f, _sanityIcon, _sanityChestColor, "藍灰寶箱 —— 鎮靜藥丸（回 SAN）");
             LegendRow(list, -470f, _sealIcon, _sealChestColor, "黑寶箱 —— 邪神雕像");
             LegendRow(list, -520f, _sealIcon, _finalSealColor, "最後的邪神雕像（閃爍）");
+            LegendRow(list, -570f, null, _bossColor, "邪神（進過 Boss 房後顯示）");
         }
 
         /// <summary>一列道具：左邊大圖示，右邊名稱 / 數量與說明，回傳數量文字。</summary>
@@ -255,9 +260,28 @@ namespace DrownedDream
                 UIFactory.Image(marker, ChestColor(chest));
             }
 
+            DrawBoss(ToMap, scale);
+
             // 玩家位置（白點）
             var me = MapRect("Player", ToMap(_player.transform.position) - new Vector2(6f, 6f), new Vector2(12f, 12f));
             UIFactory.Image(me, Color.white);
+        }
+
+        /// <summary>Boss 標記：進過 Boss 房後畫出 Boss 範圍與名稱（封印後變灰）。</summary>
+        private void DrawBoss(System.Func<Vector2, Vector2> toMap, float scale)
+        {
+            var boss = BossController.Instance;
+            if (boss == null) return;
+            var b = boss.Bounds;
+            var room = Room.FindAt(b.center);
+            if (room == null || !room.Visited) return;
+
+            var color = boss.IsSealed ? _sealedBossColor : _bossColor;
+            var size = new Vector2(Mathf.Max(12f, b.size.x * scale), Mathf.Max(12f, b.size.y * scale));
+            var rt = MapRect("Boss", toMap(b.center) - size / 2f, size);
+            UIFactory.Image(rt, new Color(color.r, color.g, color.b, 0.55f));
+            var label = MapRect("BossLabel", toMap(new Vector2(b.center.x, b.max.y)) + new Vector2(-60f, 2f), new Vector2(120f, 28f));
+            UIFactory.Text(label, boss.IsSealed ? "邪神（已封印）" : "邪神", 20, TextAnchor.MiddleCenter, color);
         }
 
         /// <summary>在小地圖內建立左下角錨點的矩形。</summary>

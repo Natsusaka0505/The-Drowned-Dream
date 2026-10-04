@@ -43,7 +43,7 @@ namespace DrownedDream
             "又是那個夢……",
             "漆黑的海底洞窟深處，沉睡著古老邪神的寶藏。",
             "祂在呼喚我。",
-            "（A/D 移動　W 跳躍　Space 發射魚叉　K 憋氣）",
+            "（A/D 移動　W 跳躍　Space 發射魚叉　Q 憋氣）",
         };
 
         /// <summary>結局逐句文字。</summary>

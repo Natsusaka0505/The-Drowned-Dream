@@ -101,7 +101,7 @@ namespace DrownedDream
             _finalSealArrow = new TargetArrow(root, new Color(1f, 0.35f, 0.75f));
 
             var helpRt = UIFactory.Rect("Help", root, new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(30f, 20f), new Vector2(1400f, 30f));
-            UIFactory.Text(helpRt, "A/D 移動  W 跳  S 穿過平台往下  Space 魚叉  K 憋氣  E 互動  Tab 背包", 18, TextAnchor.LowerLeft, new Color(1f, 1f, 1f, 0.5f));
+            UIFactory.Text(helpRt, "A/D 移動  W 跳  S 穿過平台往下  Space 魚叉  Q 憋氣  E 互動  Tab 背包", 18, TextAnchor.LowerLeft, new Color(1f, 1f, 1f, 0.5f));
         }
 
         /// <summary>建立頭像：框圖在底，頭像疊在框內（框圖 726×697，邊框約 28 像素）。</summary>

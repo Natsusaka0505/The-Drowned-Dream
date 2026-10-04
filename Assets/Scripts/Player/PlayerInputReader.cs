@@ -15,7 +15,7 @@ namespace DrownedDream
         [SerializeField] private InputAction _jump = new InputAction("Jump", InputActionType.Button);
         /// <summary>發射魚叉（Space）。</summary>
         [SerializeField] private InputAction _fire = new InputAction("Fire", InputActionType.Button);
-        /// <summary>憋氣 / 提早結束（K、Left Shift）。</summary>
+        /// <summary>憋氣 / 提早結束（Q）。</summary>
         [SerializeField] private InputAction _breath = new InputAction("Breath", InputActionType.Button);
         /// <summary>互動（E）。</summary>
         [SerializeField] private InputAction _interact = new InputAction("Interact", InputActionType.Button);
@@ -84,7 +84,7 @@ namespace DrownedDream
             }
             AddDefault(_jump, "<Keyboard>/w", "<Keyboard>/upArrow", "<Gamepad>/buttonSouth");
             AddDefault(_fire, "<Keyboard>/space", "<Gamepad>/buttonWest");
-            AddDefault(_breath, "<Keyboard>/k", "<Keyboard>/leftShift", "<Gamepad>/rightShoulder");
+            AddDefault(_breath, "<Keyboard>/q", "<Gamepad>/rightShoulder");
             AddDefault(_interact, "<Keyboard>/e", "<Gamepad>/buttonNorth");
             AddDefault(_down, "<Keyboard>/s", "<Keyboard>/downArrow", "<Gamepad>/dpad/down");
             AddDefault(_inventory, "<Keyboard>/tab", "<Keyboard>/i", "<Gamepad>/select");
