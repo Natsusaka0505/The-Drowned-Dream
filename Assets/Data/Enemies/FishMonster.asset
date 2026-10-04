@@ -35,6 +35,13 @@ MonoBehaviour:
   _bubbleSpeed: 3
   _bubbleSize: 0.6
   _bubbleLifetime: 4
+  _bubbleFrames:
+  - {fileID: 21300000, guid: 1c217357335b848ed8fc494f04bf05ef, type: 3}
+  - {fileID: 21300000, guid: b51ebfb77962646c3a50b4cd1ce64d06, type: 3}
+  - {fileID: 21300000, guid: debf081b3875b4d659aae2ad02a94753, type: 3}
+  - {fileID: 21300000, guid: ea482acb7339b4deaa5c53c78532716b, type: 3}
+  - {fileID: 21300000, guid: 61b00837101094fbf99f67f435ce0cb5, type: 3}
+  _bubbleFrameDuration: 0.16
   _spikeCooldown: 3
   _spikeWindup: 0.7
   _spikeActive: 0.3

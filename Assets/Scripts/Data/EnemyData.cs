@@ -119,6 +119,18 @@ namespace DrownedDream
         [SerializeField] private float _bubbleLifetime = 4f;
         /// <summary>泡泡彈存活秒數（唯讀）</summary>
         public float BubbleLifetime => _bubbleLifetime;
+        /// <summary>泡泡彈動畫畫格（依序循環；空著用單色圓形）。</summary>
+        [SerializeField] private Sprite[] _bubbleFrames;
+        /// <summary>泡泡彈動畫畫格。</summary>
+        public Sprite[] BubbleFrames => _bubbleFrames;
+        /// <summary>泡泡彈每格秒數。</summary>
+        [SerializeField] private float _bubbleFrameDuration = 0.16f;
+        /// <summary>泡泡彈每格秒數。</summary>
+        public float BubbleFrameDuration => _bubbleFrameDuration;
+        /// <summary>泡泡彈動畫外觀放大倍率（判定大小不變）。</summary>
+        [SerializeField] private float _bubbleArtScale = 1.6f;
+        /// <summary>泡泡彈動畫外觀放大倍率。</summary>
+        public float BubbleArtScale => _bubbleArtScale;
 
         [Header("觸手：地面突刺")]
         /// <summary>地刺間隔秒數（玩家在偵測範圍內、橫戳範圍外時使用；0 = 不用）</summary>

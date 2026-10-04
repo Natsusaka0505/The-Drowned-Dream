@@ -89,6 +89,10 @@ namespace DrownedDream.EditorTools
         public const string CheckpointSpritePath = "Assets/Art/Props/checkpoint.png";
         /// <summary>怪物畫格資料夾（眼球 / 海蝶 / 觸鬚）。</summary>
         public const string EnemyArtDir = "Assets/Art/Enemies";
+        /// <summary>彈幕畫格（由 Weapon/Bullet/Bullet1~5.png 縮成 256px：projectile_0~4.png）。</summary>
+        public const string ProjectileFramePathFormat = "Assets/Art/Enemies/projectile_{0}.png";
+        /// <summary>彈幕畫格數。</summary>
+        private const int ProjectileFrameCount = 5;
         /// <summary>角色畫格資料夾。</summary>
         public const string PlayerArtDir = "Assets/Art/Player";
         /// <summary>角色畫格 PPU（站姿約 455px 高 ≈ 1.6 單位）。</summary>
@@ -346,6 +350,11 @@ namespace DrownedDream.EditorTools
                 ("_color", new Color(0.95f, 0.9f, 0.4f)),
                 ("_size", new Vector2(1.2f, 1.2f))));
             AssignEnemyArt(d.Fish, "jellyfish", 6, new[] { 0.12f, 0.12f, 0.12f, 0.12f, 0.12f, 0.12f }, null); // 水母（取代紅色魚怪）
+            if (d.Fish.BubbleFrames == null || d.Fish.BubbleFrames.Length == 0) // 水母泡泡彈改用子彈動畫（已設定的不動）
+            {
+                Wire(d.Fish, ("_bubbleFrames", LoadProjectileFrames()));
+                EditorUtility.SetDirty(d.Fish);
+            }
             AssignEnemyArt(d.Eye, "eye_lid", 4, new[] { 2.2f, 0.05f, 0.08f, 0.05f }, null);      // 眼皮：張眼久一點，偶爾眨眼
             if (d.Eye.BaseSprite == null)
             {
@@ -355,7 +364,7 @@ namespace DrownedDream.EditorTools
                     ("_lookSprite", AssetDatabase.LoadAssetAtPath<Sprite>(ImportSprite($"{EnemyArtDir}/eye_iris.png", 100, SpriteAlignment.Center))));
                 EditorUtility.SetDirty(d.Eye);
             }
-            AssignEnemyArt(d.Tentacle, "seabutterfly", 4, new[] { 0.12f, 0.12f, 0.12f, 0.12f }, // 拍翅
+            AssignEnemyArt(d.Tentacle, "seabutterfly", 5, new[] { 0.12f, 0.12f, 0.12f, 0.12f, 0.12f }, // 拍翅（2026-10-04 換成美術新圖 5 格）
                 AssetDatabase.LoadAssetAtPath<Sprite>(ImportSprite($"{EnemyArtDir}/tendril.png", 32, SpriteAlignment.LeftCenter)));
             if (d.Eye.BeamFx == null)
             {
@@ -499,7 +508,11 @@ namespace DrownedDream.EditorTools
                 ("_sealIcon", AssetDatabase.LoadAssetAtPath<Sprite>(IdolSpritePath)),
                 ("_hpIcon", AssetDatabase.LoadAssetAtPath<Sprite>(BandageSpritePath)),
                 ("_sanityIcon", AssetDatabase.LoadAssetAtPath<Sprite>(PillSpritePath)),
-                ("_elfSprite", UISprite(ElfSpritePath, 256)));
+                ("_elfSprite", UISprite(ElfSpritePath, 256)),
+                ("_bossSprite", AssetDatabase.LoadAssetAtPath<Sprite>($"{BossArtDir}/boss_00.png")), // 精靈曝光後換成邪神頭像
+                ("_bossMapFrames", Enumerable.Range(0, BossFrameDurations.Length)
+                    .Select(i => (Object)AssetDatabase.LoadAssetAtPath<Sprite>($"{BossArtDir}/boss_{i:00}.png")).ToArray()), // 小地圖 Boss 動畫
+                ("_bossMapDurations", BossFrameDurations));
             var story = canvasGo.AddComponent<StoryPanel>();
             var title = BuildTitleScreen(canvasGo);
 
@@ -623,8 +636,10 @@ namespace DrownedDream.EditorTools
             float arenaFloor = PrototypeMapLayout.ArenaFloorY;
             float arenaX = PrototypeMapLayout.ArenaCenterX;
             var boss = MakeBoss(root, new Vector2(arenaX, arenaFloor));
-            // 祭壇靠左牆（寬 3，左緣離牆約 0.1），避開 Boss 左外側鎖鏈的地錨
-            MakeAltar(root, boss, new Vector2(PrototypeMapLayout.BossArena.x * PrototypeMapLayout.RoomUnits + 2.1f, arenaFloor + 0.5f));
+            // 兩座祭壇：Boss 左右各一，靠牆（寬 3，外緣離牆約 0.1），避開外側鎖鏈的地錨；兩座都啟動才封印
+            float altarOffset = arenaX - (PrototypeMapLayout.BossArena.x * PrototypeMapLayout.RoomUnits + 2.1f);
+            MakeAltar(root, boss, new Vector2(arenaX - altarOffset, arenaFloor + 0.5f), "SealAltar_Left");
+            MakeAltar(root, boss, new Vector2(arenaX + altarOffset, arenaFloor + 0.5f), "SealAltar_Right");
             // 第 5 個封印道具：第一次進 Boss 房後，從這些候選點（一般區塊地板）隨機出現
             MakeHiddenSealSpawner(root, d.ChestBlack, new[]
             {
@@ -1162,7 +1177,8 @@ namespace DrownedDream.EditorTools
             var boss = go.AddComponent<BossController>();
             var lightningFx = AssetDatabase.LoadAssetAtPath<GameObject>(LightningFxPath);
             if (lightningFx == null) Debug.LogWarning("[DrownedDream] 找不到落雷特效：" + LightningFxPath);
-            Wire(boss, ("_renderer", sr), ("_projectileBlockMask", Mask(s_groundLayer)), ("_lightningFx", lightningFx), ("_hoverHeight", BossHoverHeight));
+            Wire(boss, ("_renderer", sr), ("_projectileBlockMask", Mask(s_groundLayer)), ("_lightningFx", lightningFx), ("_hoverHeight", BossHoverHeight),
+                ("_projectileFrames", LoadProjectileFrames()));
             Wire(go.GetComponent<FearSource>(), ("_radius", 18f), ("_drainPerSecond", 4f)); // Boss 變大，恐懼範圍跟著放大
             MakeBossRock(parent, bossFeet + Vector2.up * BossRockCover);
             MakeBossChains(parent, feet, bossFeet + Vector2.up * BossRockCover);
@@ -1186,7 +1202,17 @@ namespace DrownedDream.EditorTools
             }
             MakeSprite(go, sprite, Color.white, 9); // 在 Boss（8）前面，遮住下半部
             go.transform.localScale = new Vector3(BossRockSize.x / sprite.bounds.size.x, BossRockSize.y / sprite.bounds.size.y, 1f);
+
+            // 頂面可站立：掛 PlatformGroup（執行時設成 Ground + 單向平台，可從下方跳上、按下穿過）
+            var platform = new GameObject("BossRockPlatform", typeof(PlatformGroup)).transform;
+            platform.SetParent(parent);
+            platform.position = top;
+            var surface = Child(platform, "Surface", new Vector2(0f, -BossRockSurfaceThickness / 2f));
+            surface.gameObject.AddComponent<BoxCollider2D>().size = new Vector2(BossRockSize.x - 1f, BossRockSurfaceThickness);
         }
+
+        /// <summary>浮岩站立面碰撞厚度（單位）。</summary>
+        private const float BossRockSurfaceThickness = 0.4f;
 
         /// <summary>鎖鏈：(浮岩頂面相對位置 → 地面相對位置)，左右對稱各兩條。</summary>
         private static readonly (Vector2 top, Vector2 ground)[] BossChains =
@@ -1374,10 +1400,31 @@ namespace DrownedDream.EditorTools
             return sr;
         }
 
-        /// <summary>怪物畫格欄位空著時，補上 Assets/Art/Enemies/{prefix}_0~N.png（已設定的不動，保留企劃調整）。</summary>
+        /// <summary>載入彈幕畫格（PPU 256 → 1 單位寬，與單色圓形同大小），缺圖回傳空陣列（改用單色圓形）。</summary>
+        private static Object[] LoadProjectileFrames()
+        {
+            var frames = new Object[ProjectileFrameCount];
+            for (int i = 0; i < frames.Length; i++)
+            {
+                string path = string.Format(ProjectileFramePathFormat, i);
+                ConfigureSprite(path, 256, SpriteAlignment.Center, 256, compressed: true);
+                frames[i] = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+                if (frames[i] == null)
+                {
+                    Debug.LogWarning("[DrownedDream] 找不到彈幕畫格，改用單色圓形：" + path);
+                    return new Object[0];
+                }
+            }
+            return frames;
+        }
+
+        /// <summary>
+        /// 怪物畫格欄位空著、或格數與美術圖不同（換了新圖）時，補上 Assets/Art/Enemies/{prefix}_0~N.png；
+        /// 格數相同的不動，保留企劃調整。
+        /// </summary>
         private static void AssignEnemyArt(EnemyData data, string prefix, int count, float[] durations, Sprite tendril)
         {
-            if (data.AnimFrames != null && data.AnimFrames.Length > 0 && data.AnimFrames[0] != null) return;
+            if (data.AnimFrames != null && data.AnimFrames.Length == count && data.AnimFrames[0] != null) return;
             var frames = new Object[count];
             for (int i = 0; i < count; i++)
             {
@@ -1400,10 +1447,10 @@ namespace DrownedDream.EditorTools
             return path;
         }
 
-        /// <summary>建立封印祭壇。</summary>
-        private static void MakeAltar(Transform parent, BossController boss, Vector2 pos)
+        /// <summary>建立封印祭壇（綠光，啟動後變亮）。</summary>
+        private static void MakeAltar(Transform parent, BossController boss, Vector2 pos, string name = "SealAltar")
         {
-            var go = new GameObject("SealAltar");
+            var go = new GameObject(name);
             go.transform.SetParent(parent);
             go.transform.position = pos;
             // pos 為祭壇中心（底部 = pos.y - 0.5）；有美術圖時底部貼地、寬 3 單位
@@ -1412,9 +1459,9 @@ namespace DrownedDream.EditorTools
                 var sr = MakeSprite(Child(go.transform, "Visual", Vector2.zero).gameObject, s_square, new Color(0.75f, 0.65f, 0.4f), 3);
                 sr.transform.localScale = new Vector3(2f, 1f, 1f);
             }
-            MakePointLight(go.transform, "GreenLight", new Vector2(0f, 0.8f), new Color(0.35f, 1f, 0.5f), 1.8f, 0.3f, 2.5f); // 祭壇綠光
+            var light = MakePointLight(go.transform, "GreenLight", new Vector2(0f, 0.8f), new Color(0.35f, 1f, 0.5f), 1.8f, 0.3f, 2.5f); // 祭壇綠光
             var altar = go.AddComponent<SealAltar>();
-            Wire(altar, ("_boss", boss));
+            Wire(altar, ("_boss", boss), ("_light", light));
         }
 
         /// <summary>
@@ -1443,7 +1490,7 @@ namespace DrownedDream.EditorTools
             go.transform.SetParent(parent);
             go.transform.position = pos;
             var area = go.AddComponent<BossArea>();
-            Wire(area, ("_boss", boss));
+            Wire(area, ("_boss", boss), ("_elfSprite", UISprite(ElfSpritePath, 256))); // 精靈變身演出
         }
 
         /// <summary>建立憋氣屏障（左下角位置 + 尺寸），並在底部附近放水聲（靠近才聽得到）。</summary>

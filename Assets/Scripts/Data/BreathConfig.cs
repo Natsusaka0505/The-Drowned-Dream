@@ -15,7 +15,7 @@ namespace DrownedDream
         /// <summary>SAN 0 時最大憋氣時間比例（唯讀）</summary>
         public float MinHoldRatio => _minHoldRatio;
         /// <summary>完整憋氣後的 CD 秒數</summary>
-        [SerializeField] private float _cooldown = 8f;
+        [SerializeField] private float _cooldown = 4f; // 2026-10-04 由 8 縮短為 4
         /// <summary>完整憋氣後的 CD 秒數（唯讀）</summary>
         public float Cooldown => _cooldown;
         /// <summary>提早結束時 CD 依比例縮短，此為最小比例</summary>

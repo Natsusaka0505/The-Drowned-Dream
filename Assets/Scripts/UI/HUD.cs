@@ -30,6 +30,12 @@ namespace DrownedDream
         /// <summary>一般提示訊息的不透明度（0~1）。</summary>
         [SerializeField, Range(0f, 1f)] private float _messageAlpha = 0.6f;
 
+        [Header("封印道具箭頭")]
+        /// <summary>一般封印道具寶箱的箭頭顏色。</summary>
+        [SerializeField] private Color _sealArrowColor = new Color(0.7f, 0.3f, 0.95f);
+        /// <summary>最後一個封印道具的箭頭顏色。</summary>
+        [SerializeField] private Color _finalSealArrowColor = new Color(1f, 0.35f, 0.75f);
+
         [Header("封印進度（右上角）")]
         /// <summary>是否顯示右上角封印道具數量（2026-10-04 預設關閉，背包仍看得到）。</summary>
         [SerializeField] private bool _showSealCount;
@@ -62,8 +68,10 @@ namespace DrownedDream
         private UIBubbleRow _oxygen;
         /// <summary>精靈對話框。</summary>
         private ElfDialog _elf;
-        /// <summary>最後封印道具的方向箭頭。</summary>
-        private TargetArrow _finalSealArrow;
+        /// <summary>封印道具寶箱的方向箭頭（每個未開的黑寶箱一支，不夠時再建立）。</summary>
+        private readonly System.Collections.Generic.List<TargetArrow> _sealArrows = new System.Collections.Generic.List<TargetArrow>();
+        /// <summary>HUD 根物件（建立箭頭用）。</summary>
+        private RectTransform _root;
         /// <summary>是否已進過 Boss 房（之後提示改為一般文字，不再由精靈說）。</summary>
         private bool _bossMode;
         /// <summary>魚叉數文字（沒有圖示時使用）。</summary>
@@ -78,6 +86,12 @@ namespace DrownedDream
         private Text _messageText;
         /// <summary>提示訊息剩餘秒數。</summary>
         private float _messageTimer;
+        /// <summary>全畫面閃白圖。</summary>
+        private Image _flash;
+        /// <summary>閃白剩餘秒數。</summary>
+        private float _flashTimer;
+        /// <summary>閃白總秒數。</summary>
+        private float _flashDuration;
         /// <summary>玩家快取。</summary>
         private Player _player;
 
@@ -107,10 +121,14 @@ namespace DrownedDream
             _messageText = UIFactory.Text(msgRt, "", 30, TextAnchor.MiddleCenter, new Color(1f, 0.95f, 0.8f));
 
             _elf = new ElfDialog(root, _elfSprite, _elfAlpha);
-            _finalSealArrow = new TargetArrow(root, new Color(1f, 0.35f, 0.75f));
+            _root = root;
 
             var helpRt = UIFactory.Rect("Help", root, new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(30f, 20f), new Vector2(1400f, 30f));
             UIFactory.Text(helpRt, "A/D 移動  W 跳  S 穿過平台往下  Space 魚叉  Q 憋氣  E 互動  Tab 背包", 18, TextAnchor.LowerLeft, new Color(1f, 1f, 1f, 0.5f));
+
+            // 全畫面閃白（最上層，平常透明）
+            _flash = UIFactory.Image(UIFactory.Stretch("ScreenFlash", root), new Color(1f, 1f, 1f, 0f));
+            _flash.raycastTarget = false;
         }
 
         /// <summary>建立頭像：框圖在底，頭像疊在框內（框圖 726×697，邊框約 28 像素）。</summary>
@@ -136,6 +154,7 @@ namespace DrownedDream
         {
             GameEvents.MessageRequested += ShowMessage;
             GameEvents.BossRevealed += OnBossRevealed;
+            GameEvents.ScreenFlashRequested += OnScreenFlash;
         }
 
         /// <summary>取消訂閱。</summary>
@@ -143,6 +162,14 @@ namespace DrownedDream
         {
             GameEvents.MessageRequested -= ShowMessage;
             GameEvents.BossRevealed -= OnBossRevealed;
+            GameEvents.ScreenFlashRequested -= OnScreenFlash;
+        }
+
+        /// <summary>開始閃白：立刻全白，seconds 秒內淡出。</summary>
+        private void OnScreenFlash(float seconds)
+        {
+            _flashDuration = Mathf.Max(0.05f, seconds);
+            _flashTimer = _flashDuration;
         }
 
         /// <summary>第一次進 Boss 房：精靈退場，之後提示改為一般文字。</summary>
@@ -217,7 +244,13 @@ namespace DrownedDream
             _sanity.Tick(dt);
             _oxygen.Tick(dt);
             _elf.Tick(dt);
-            _finalSealArrow.Tick();
+            TickSealArrows();
+
+            if (_flashTimer > 0f)
+            {
+                _flashTimer -= dt;
+                _flash.color = new Color(1f, 1f, 1f, Mathf.Clamp01(_flashTimer / _flashDuration));
+            }
 
             if (_messageTimer > 0f)
             {
@@ -226,6 +259,28 @@ namespace DrownedDream
                 c.a = Mathf.Clamp01(_messageTimer / 0.4f) * _messageAlpha;
                 _messageText.color = c;
             }
+        }
+
+        /// <summary>每個未開的封印道具寶箱各一支箭頭（最後一個粉紅色，其餘紫色），多出來的箭頭隱藏。</summary>
+        private void TickSealArrows()
+        {
+            int used = 0;
+            foreach (var chest in TreasureChest.All)
+            {
+                if (chest == null || chest.IsOpened || !(chest.ItemPrefab is SealItem)) continue;
+                bool final = chest.IsFinalSeal;
+                if (used >= _sealArrows.Count) _sealArrows.Add(null);
+                // 顏色依是否為最後一個決定，同一支箭頭顏色不同時重建
+                var color = final ? _finalSealArrowColor : _sealArrowColor;
+                if (_sealArrows[used] == null || _sealArrows[used].Color != color)
+                {
+                    _sealArrows[used]?.Destroy();
+                    _sealArrows[used] = new TargetArrow(_root, color);
+                }
+                _sealArrows[used].Tick(chest.transform, final ? "最後的雕像" : "雕像");
+                used++;
+            }
+            for (int i = used; i < _sealArrows.Count; i++) _sealArrows[i]?.Tick(null, null);
         }
 
         /// <summary>顯示提示訊息：進 Boss 房前由精靈說（左下對話框），之後用畫面下方一般文字。</summary>
