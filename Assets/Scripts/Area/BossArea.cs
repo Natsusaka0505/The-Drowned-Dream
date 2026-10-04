@@ -23,8 +23,10 @@ namespace DrownedDream
         [SerializeField] private Sprite _elfSprite;
         /// <summary>精靈在場景中的高度（單位）。</summary>
         [SerializeField] private float _elfHeight = 1.4f;
-        /// <summary>海兔從玩家頭上跳到身旁的秒數（場景有 SeaHare 時）。</summary>
+        /// <summary>海兔從玩家頭頂飄起的秒數（場景有 SeaHare 時）。</summary>
         [SerializeField] private float _leaveHeadSeconds = 0.6f;
+        /// <summary>海兔飄起後離頭頂的高度（單位；說第一句時停在這裡）。</summary>
+        [SerializeField] private float _leaveHeadLift = 1.2f;
         /// <summary>第一句台詞（精靈在玩家身旁說）。</summary>
         [SerializeField] private string _tauntLine1 = "終於上當了……";
         /// <summary>第二句（玩家已集齊雕像時，飛向 Boss 位置途中說）。</summary>
@@ -105,7 +107,7 @@ namespace DrownedDream
         }
 
         /// <summary>
-        /// 第一次進房（鎖輸入）：精靈出現在玩家身旁說第一句 → 鏡頭轉向 Boss、精靈飛過去說第二句 → 說第三句 →
+        /// 第一次進房（鎖輸入）：海兔從玩家頭頂飄起說第一句（沒有海兔時精靈出現在玩家身旁）→ 鏡頭轉向 Boss、精靈從頭頂上方飛過去說第二句 → 說第三句 →
         /// 發光抖動放大 → 閃白、Boss 現身咆哮 → 特寫數秒 → 切回玩家、Boss 啟動。
         /// 台詞在 Boss 現身前發出，因此由左下精靈對話框說；現身後精靈退場（HUD 收到 BossRevealed）。
         /// </summary>
@@ -120,16 +122,17 @@ namespace DrownedDream
             var hare = SeaHare.Instance;
             if (hare != null)
             {
-                // 0. 海兔從玩家頭上跳下來，邊跳邊放大到演出大小
+                // 0. 海兔從玩家頭頂直直飄起（不跳到身旁），邊飄邊放大到演出大小，之後從頭頂上方飛向 Boss
                 elf = hare.LeaveHead(30);
                 elfLight = AddElfLight(elf.gameObject);
                 Vector2 from = elf.position;
+                start = from + Vector2.up * _leaveHeadLift;
                 Vector3 fromScale = elf.localScale;
                 Vector3 toScale = Vector3.one * (_elfHeight / Mathf.Max(0.01f, hare.SpriteHeight));
                 for (float t = 0f; t < _leaveHeadSeconds; t += Time.deltaTime)
                 {
                     float k = Mathf.SmoothStep(0f, 1f, t / _leaveHeadSeconds);
-                    elf.position = Vector2.Lerp(from, start, k) + Vector2.up * (Mathf.Sin(k * Mathf.PI) * 1f);
+                    elf.position = Vector2.Lerp(from, start, k);
                     elf.localScale = Vector3.Lerp(fromScale, toScale, k);
                     yield return null;
                 }
@@ -139,7 +142,7 @@ namespace DrownedDream
                 elf = SpawnElf(start, out elfLight);
             }
 
-            // 1. 精靈在玩家身旁
+            // 1. 精靈在玩家頭頂上方（沒有海兔時在身旁）
             GameEvents.ShowMessage(_tauntLine1, _lineSeconds);
             yield return Hover(elf, start, _lineSeconds);
 

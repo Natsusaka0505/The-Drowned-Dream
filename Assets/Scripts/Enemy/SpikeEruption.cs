@@ -240,7 +240,7 @@ namespace DrownedDream
             Vector2 p = player.transform.position;
             bool inX = Mathf.Abs(p.x - _ground.x) <= _width / 2f + PlayerPadding;
             bool inY = p.y >= _ground.y - PlayerPadding && p.y <= _ground.y + _height + PlayerPadding;
-            if (inX && inY) _hasHit = HazardSprites.HitPlayer(player, _damage, 0f);
+            if (inX && inY) _hasHit = HazardSprites.HitPlayer(player, _damage, 0f, _ground);
         }
 
         /// <summary>設定外觀子物件大小、透明度與顏色。</summary>

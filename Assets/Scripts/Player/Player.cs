@@ -6,7 +6,7 @@ namespace DrownedDream
     [RequireComponent(typeof(PlayerStatus), typeof(PlayerInputReader), typeof(PlayerMove))]
     [RequireComponent(typeof(PlayerAttack), typeof(PlayerBreath), typeof(PlayerPickup))]
     [RequireComponent(typeof(PlayerEnding), typeof(PlayerRespawn), typeof(PlayerConfusion))]
-    [RequireComponent(typeof(PlayerOpenChest))]
+    [RequireComponent(typeof(PlayerOpenChest), typeof(PlayerHitFeedback))]
     public class Player : MonoBehaviour
     {
         /// <summary>場景中唯一的玩家。</summary>
@@ -30,6 +30,8 @@ namespace DrownedDream
         public PlayerRespawn Respawn { get; private set; }
         /// <summary>低 SAN 方向錯亂。</summary>
         public PlayerConfusion Confusion { get; private set; }
+        /// <summary>受擊反饋（擊退、閃紅、震動、頓幀）。</summary>
+        public PlayerHitFeedback HitFeedback { get; private set; }
 
         /// <summary>敵人是否看得到玩家（憋氣中或死亡時看不到，F-BRE-04）。</summary>
         public bool IsVisibleToEnemies => !Status.IsHoldingBreath && Status.IsAlive;
@@ -47,6 +49,8 @@ namespace DrownedDream
             Ending = GetComponent<PlayerEnding>();
             Respawn = GetComponent<PlayerRespawn>();
             Confusion = GetComponent<PlayerConfusion>();
+            HitFeedback = GetComponent<PlayerHitFeedback>();
+            if (HitFeedback == null) HitFeedback = gameObject.AddComponent<PlayerHitFeedback>(); // 舊場景沒有此元件時自動補上（用預設值）
         }
 
         /// <summary>清除單例。</summary>

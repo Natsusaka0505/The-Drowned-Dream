@@ -131,7 +131,7 @@ namespace DrownedDream
         public void TryAttack(Player player, double range)
         {
             if (!DetectPlayer(player, range)) return;
-            player.Status.TakeHit(Data.AttackDamage);
+            player.Status.TakeHit(Data.AttackDamage, _body.position);
         }
 
         /// <summary>巡游魚怪：左右巡邏 → 偵測後左右追擊 → 失去目標返回。</summary>

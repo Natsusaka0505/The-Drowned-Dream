@@ -196,11 +196,11 @@ namespace DrownedDream
         /// <summary>玩家是否可被攻擊（活著且沒有憋氣隱形）。</summary>
         public static bool CanHit(Player player) => player != null && player.IsVisibleToEnemies;
 
-        /// <summary>對玩家造成傷害（HP 依 VitalsConfig 比例扣）與額外 SAN 傷害，回傳是否命中。</summary>
-        public static bool HitPlayer(Player player, float damage, float sanityDamage)
+        /// <summary>對玩家造成傷害（HP 依 VitalsConfig 比例扣）與額外 SAN 傷害，回傳是否命中（from = 攻擊來源位置，擊退方向用）。</summary>
+        public static bool HitPlayer(Player player, float damage, float sanityDamage, Vector2? from = null)
         {
             if (!CanHit(player)) return false;
-            if (!player.Status.TakeHit(damage)) return false;
+            if (!player.Status.TakeHit(damage, from)) return false;
             if (sanityDamage > 0f) player.Status.LoseSanity(sanityDamage);
             return true;
         }
@@ -363,7 +363,7 @@ namespace DrownedDream
 
             if (HazardSprites.CanHit(player) &&
                 Vector2.Distance(player.transform.position, transform.position) <= PlayerHitRadius + _hitSize * 0.5f &&
-                HazardSprites.HitPlayer(player, _damage, _sanityDamage))
+                HazardSprites.HitPlayer(player, _damage, _sanityDamage, transform.position))
             {
                 Destroy(gameObject);
             }
@@ -623,7 +623,7 @@ namespace DrownedDream
             var player = Player.Instance;
             if (!_hasHit && HazardSprites.CanHit(player) && Contains(hitCenter, hitSize, rot, player.transform.position))
             {
-                _hasHit = HazardSprites.HitPlayer(player, _damage, _sanityDamage);
+                _hasHit = HazardSprites.HitPlayer(player, _damage, _sanityDamage, hitCenter);
             }
         }
 

@@ -50,6 +50,12 @@ namespace DrownedDream
         /// <summary>SAN 填充條圖。</summary>
         [SerializeField] private Sprite _sanFill;
 
+        [Header("受擊紅閃")]
+        /// <summary>玩家受擊時全畫面紅閃的顏色（alpha = 最強時的不透明度）。</summary>
+        [SerializeField] private Color _hurtColor = new Color(0.8f, 0f, 0.05f, 0.3f);
+        /// <summary>受擊紅閃淡出秒數。</summary>
+        [SerializeField] private float _hurtSeconds = 0.4f;
+
         [Header("氧氣泡泡")]
         /// <summary>泡泡圖（依序用在第 1~N 顆）。</summary>
         [SerializeField] private Sprite[] _bubbleSprites;
@@ -92,6 +98,10 @@ namespace DrownedDream
         private float _flashTimer;
         /// <summary>閃白總秒數。</summary>
         private float _flashDuration;
+        /// <summary>受擊紅閃圖（在 HUD 元件底下，不擋數值條）。</summary>
+        private Image _hurt;
+        /// <summary>受擊紅閃剩餘秒數。</summary>
+        private float _hurtTimer;
         /// <summary>玩家快取。</summary>
         private Player _player;
 
@@ -129,6 +139,12 @@ namespace DrownedDream
             // 全畫面閃白（最上層，平常透明）
             _flash = UIFactory.Image(UIFactory.Stretch("ScreenFlash", root), new Color(1f, 1f, 1f, 0f));
             _flash.raycastTarget = false;
+
+            // 受擊紅閃（放最底層，數值條仍清楚）
+            var hurtRt = UIFactory.Stretch("HurtFlash", root);
+            hurtRt.SetAsFirstSibling();
+            _hurt = UIFactory.Image(hurtRt, Color.clear);
+            _hurt.raycastTarget = false;
         }
 
         /// <summary>建立頭像：框圖在底，頭像疊在框內（框圖 726×697，邊框約 28 像素）。</summary>
@@ -190,8 +206,12 @@ namespace DrownedDream
             status.SanityChanged += OnSanity;
             status.HarpoonCountChanged += OnAmmo;
             status.SealCountChanged += OnSeals;
+            status.Damaged += OnDamaged;
             status.NotifyAll(); // 訂閱前可能已錯過初始事件，主動同步一次
         }
+
+        /// <summary>玩家受擊：開始紅閃。</summary>
+        private void OnDamaged() => _hurtTimer = Mathf.Max(0.05f, _hurtSeconds);
 
         /// <summary>更新 HP 條。</summary>
         private void OnHealth(double c, double m) => _hp.Set((float)(c / m), $"HP  {Math.Ceiling(c):0} / {m:0}"); // 無條件進位：還活著就不會顯示 0
@@ -245,6 +265,14 @@ namespace DrownedDream
             _oxygen.Tick(dt);
             _elf.Tick(dt);
             TickSealArrows();
+
+            if (_hurtTimer > 0f)
+            {
+                _hurtTimer -= dt;
+                var hc = _hurtColor;
+                hc.a *= Mathf.Clamp01(_hurtTimer / Mathf.Max(0.05f, _hurtSeconds));
+                _hurt.color = hc;
+            }
 
             if (_flashTimer > 0f)
             {

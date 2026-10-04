@@ -39,6 +39,8 @@ namespace DrownedDream
         private bool _jumpHeld;
         /// <summary>這次在空中的最大下落速度（落地音效判斷用）。</summary>
         private float _airFallSpeed;
+        /// <summary>擊退剩餘秒數（期間不套用左右輸入，讓擊退速度不被抵銷）。</summary>
+        private float _knockbackTimer;
 
         /// <summary>起跳（音效用）。</summary>
         public event Action Jumped;
@@ -108,7 +110,8 @@ namespace DrownedDream
             float target = _moveX * (float)_status.MoveSpeed;
             float rate = Mathf.Abs(target) > 0.01f ? Config.Acceleration : Config.Deceleration;
             if (!IsGrounded) rate *= Config.AirControl;
-            velocity.x = Mathf.MoveTowards(velocity.x, target, rate * dt);
+            if (_knockbackTimer > 0f) _knockbackTimer -= dt; // 擊退中：保留擊退的水平速度
+            else velocity.x = Mathf.MoveTowards(velocity.x, target, rate * dt);
 
             // 固定高度：不論短按或長按都用同一個初速；按住不放則一落地就再跳
             bool pressedJump = _jumpBufferTimer > 0f && _coyoteTimer > 0f;
@@ -157,12 +160,22 @@ namespace DrownedDream
             _coyoteTimer = 0f;
         }
 
+        /// <summary>擊退：直接設定速度，seconds 秒內不吃左右輸入（受擊反饋用）。</summary>
+        public void Knockback(Vector2 velocity, float seconds)
+        {
+            _body.linearVelocity = velocity;
+            _knockbackTimer = Mathf.Max(0f, seconds);
+            IsGrounded = false;
+            _coyoteTimer = 0f;
+        }
+
         /// <summary>傳送到指定位置並清除速度（復活用）。</summary>
         public void Teleport(Vector2 position)
         {
             _body.position = position;
             transform.position = position;
             _body.linearVelocity = Vector2.zero;
+            _knockbackTimer = 0f;
         }
 
         /// <summary>腳底 BoxCast 檢查是否站在地面。</summary>

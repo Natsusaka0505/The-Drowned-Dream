@@ -74,6 +74,8 @@ namespace DrownedDream
         public int SanityStage => _sanityStage;
         /// <summary>是否位於恐懼範圍內。</summary>
         public bool InFear { get; private set; }
+        /// <summary>最近一次受擊的攻擊來源位置（null = 來源不明；受擊反饋決定擊退方向用）。</summary>
+        public Vector2? LastHitFrom { get; private set; }
 
         /// <summary>HP / 氧氣 / 復活參數。</summary>
         public VitalsConfig Vitals => _vitals;
@@ -127,11 +129,12 @@ namespace DrownedDream
 
         #region 修改方法
 
-        /// <summary>受到攻擊（有無敵時間），回傳是否真的受傷。</summary>
-        public bool TakeHit(double damage)
+        /// <summary>受到攻擊（有無敵時間；from = 攻擊來源位置，可省略），回傳是否真的受傷。</summary>
+        public bool TakeHit(double damage, Vector2? from = null)
         {
             if (!IsAlive || IsInvincible || damage <= 0d) return false;
             _invincibleTimer = _vitals.InvincibleTime;
+            LastHitFrom = from;
             // 固定扣最大 HP 的比例（F-ENM-05）；比例為 0 時才用攻擊自己的傷害值
             SetHp(Hp - (_vitals.EnemyHitHpRatio > 0f ? HpMax * _vitals.EnemyHitHpRatio : damage));
             Damaged?.Invoke();

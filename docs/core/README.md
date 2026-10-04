@@ -17,7 +17,7 @@
 
 | 類別 | Status | Action |
 |---|---|---|
-| player | `PlayerStatus`：氧氣、目前 SAN、SAN 最大值、HP、憋氣狀態、呼吸 CD、移動速度、魚叉數、封印道具數 | `PlayerMove`（左右移動 + 跳躍）、`PlayerAttack`（投擲 / 撿魚叉）、`PlayerBreath`（憋氣潛行）、`PlayerPickup`（撿道具）、`PlayerEnding`（是否觸發結局） |
+| player | `PlayerStatus`：氧氣、目前 SAN、SAN 最大值、HP、憋氣狀態、呼吸 CD、移動速度、魚叉數、封印道具數 | `PlayerMove`（左右移動 + 跳躍）、`PlayerAttack`（投擲 / 撿魚叉）、`PlayerBreath`（憋氣潛行）、`PlayerPickup`（撿道具）、`PlayerEnding`（是否觸發結局）、`PlayerHitFeedback`（受擊反饋：擊退、閃紅、震動、頓幀） |
 | enemy | `EnemyStatus`：被攻擊次數、移動速度、偵測範圍、攻擊範圍、移動狀態、是否偵測到玩家 | `EnemyAI`（自動左右移動、偵測玩家、攻擊判斷） |
 | area | `BossArea`：是否第一次進 Boss 房 | `BossArea`：偵測玩家是否進 Boss 房 |
 | 回復道具 | `RecoveryItem`：SAN 回復值、HP 回復值 | `RecoveryItem.Apply`：玩家數值回復 |
@@ -34,7 +34,7 @@ area / 回復道具 / 武器 / camera 規模小，Status 與 Action 寫在同一
 Assets/Scripts/
   Core/      GameFlow、GameEvents、IDamageable
   Data/      ScriptableObject 定義（Config、EnemyData、MapConfig、TerrainTileSet、AudioConfig）
-  Player/    PlayerStatus + 各 Action、Player（入口）、PlayerInputReader、PlayerAnimator（角色逐格動畫）
+  Player/    PlayerStatus + 各 Action、Player（入口）、PlayerInputReader、PlayerAnimator（角色逐格動畫）、PlayerHitFeedback（受擊反饋）
   Enemy/     EnemyStatus、EnemyAI、EnemyLook（瞳孔追視）、FearSource、BossController、EnemyAttacks（HazardSprites / EnemyProjectile 彈幕 / TelegraphStrike 預告範圍攻擊）、SpikeEruption（精緻地刺：裂縫預告、骨刺彈出、碎石塵霧）
   Area/      BossArea、SealAltar
   Item/      PickupItem（基底）、RecoveryItem、SealItem、TreasureChest（寶箱）、HiddenSealSpawner（第 5 個封印道具隨機出現）
@@ -61,6 +61,7 @@ Assets/Scripts/
 - 音效：`GameAudio` 只**訂閱事件**播放（`GameEvents` + 玩家元件事件：`PlayerMove.Jumped/Landed`、`PlayerAttack.Thrown`、`PlayerBreath.StateChanged`、`PlayerConfusion.WarningStarted`、`PlayerStatus.SanityStageChanged`），遊戲邏輯不直接呼叫音效。見 [SD-02 音效](../feature/需求/00-overview/SD/SD-02-audio.md)。`BgmPlayer` 訂閱 `GameStateChanged`：開場放開場曲，進入遊玩後淡出 → 換探索曲；另外每幀比對 `GameFlow.State` 該播的曲子，漏接事件（例如 Play 中重新編譯）也會自動切回。
 - Status 變動事件：例如 `PlayerStatus.HpChanged`，UI 訂閱顯示。
 - 可被魚叉命中的對象實作 `IDamageable.TakeHit()`。
+- 敵人打玩家呼叫 `PlayerStatus.TakeHit(damage, from)`（`from` = 攻擊來源位置，可省略），存在 `LastHitFrom`；受擊反饋（`PlayerHitFeedback` 擊退 / 閃紅、`HUD` 紅閃、`SeaHare` 受驚、`GameAudio` 音效）都訂閱 `PlayerStatus.Damaged`。
 
 ## 命名與註解
 
