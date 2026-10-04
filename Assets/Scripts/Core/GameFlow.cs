@@ -38,7 +38,8 @@ namespace DrownedDream
         [Header("[待確認] 開場 / 結局文字")]
         /// <summary>開場逐句文字。</summary>
         [TextArea(2, 4)]
-        [SerializeField] private string[] _introLines =
+        [SerializeField]
+        private string[] _introLines =
         {
             "又是那個夢……",
             "漆黑的海底洞窟深處，沉睡著古老邪神的寶藏。",
@@ -47,14 +48,15 @@ namespace DrownedDream
         };
 
         /// <summary>結局：每頁一張插圖 + 逐句文字（插圖依序為 Assets/Art/Ending/ending_0~4.png，由更新工具綁定；最後一頁黑底）。</summary>
-        [SerializeField] private StoryPage[] _endingPages =
+        [SerializeField]
+        private StoryPage[] _endingPages =
         {
             new StoryPage("封印完成的瞬間，海水灌進了我的肺——", "四周只剩下黑暗……和遠方某個呼喚我的聲音。"),
             new StoryPage("冰冷的海水，慢慢變成了柔軟的枕頭。", "那個聲音還在耳邊，輕輕地……"),
             new StoryPage("——！", "我猛然睜開了眼睛。"),
             new StoryPage("熟悉的房間，熟悉的床。", "……原來，全都是夢。", "洞窟、邪神、那些雕像……大概只是太累了吧。"),
             new StoryPage("直到我看見——床底下，有什麼正望著我。", "「謝謝你……帶我回家。」"),
-            new StoryPage("The Drowned Dream\n\n— 感謝遊玩 —"),
+            new StoryPage("聽海窟得聲音\n\n— 感謝遊玩 —"),
         };
 
         /// <summary>目前狀態。</summary>
